@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Petal Rush — Admin</title>
+<link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+<div id="loading-screen">
+  <div class="loading-logo">Petal Rush</div>
+  <div class="loading-sub">Admin Control Panel</div>
+  <div class="loading-bar"></div>
+</div>
+<div id="toast-container"></div>
+
+<div class="dashboard-wrap hidden" id="app">
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <h1>Petal Rush</h1>
+      <div class="sidebar-role-tag" style="background:rgba(196,83,90,0.12);border-color:rgba(196,83,90,0.3);color:var(--rose-light)">🛠️ Admin</div>
+    </div>
+    <div class="sidebar-user" onclick="showPanel('profile')">
+      <div id="sb-avatar"></div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sb-name">Admin</div>
+        <div class="sidebar-user-email" id="sb-email">…</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Management</div>
+      <button class="nav-item active" data-panel="overview" onclick="showPanel('overview')"><span class="nav-icon">📊</span> Overview</button>
+      <button class="nav-item" data-panel="users" onclick="showPanel('users')"><span class="nav-icon">👥</span> Users</button>
+      <button class="nav-item" data-panel="orders" onclick="showPanel('orders')">
+        <span class="nav-icon">📦</span> All Orders
+        <span class="nav-badge" id="orders-badge" style="display:none">!</span>
+      </button>
+      <button class="nav-item" data-panel="payments" onclick="showPanel('payments')"><span class="nav-icon">💰</span> Payments</button>
+      <button class="nav-item" data-panel="deliveries" onclick="showPanel('deliveries')"><span class="nav-icon">🚚</span> Assign Delivery</button>
+      <button class="nav-item" data-panel="products" onclick="showPanel('products')"><span class="nav-icon">🌺</span> Products</button>
+      <div class="nav-section">Account</div>
+      <button class="nav-item" data-panel="profile" onclick="showPanel('profile')"><span class="nav-icon">👤</span> My Profile</button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="nav-item w-full" onclick="logout()"><span class="nav-icon">🚪</span> Sign Out</button>
+    </div>
+  </nav>
+
+  <div class="topbar">
+    <button class="topbar-menu" onclick="toggleSidebar()">☰</button>
+    <div class="topbar-brand">Admin Panel</div>
+    <div id="topbar-avatar" onclick="showPanel('profile')" style="cursor:pointer"></div>
+  </div>
+
+  <main class="main-content">
+
+    <!-- ═══ OVERVIEW ═══ -->
+    <div class="panel active" id="panel-overview">
+      <div class="page-header"><div><h2>Admin <em>Overview</em></h2><div class="page-breadcrumb">Platform at a glance</div></div></div>
+      <div class="stats-grid mb-3">
+        <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value" id="st-users">—</div><div class="stat-label">Total Users</div></div>
+        <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-value" id="st-orders">—</div><div class="stat-label">All Orders</div></div>
+        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" id="st-revenue">—</div><div class="stat-label">Total Revenue</div></div>
+        <div class="stat-card"><div class="stat-icon">🏪</div><div class="stat-value" id="st-sellers">—</div><div class="stat-label">Sellers</div></div>
+        <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value" id="st-pending">—</div><div class="stat-label">Pending Orders</div></div>
+        <div class="stat-card"><div class="stat-icon">🏦</div><div class="stat-value" id="st-wallet">—</div><div class="stat-label">Admin Wallet</div></div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="section-header"><h3>Recent Orders</h3><button class="btn btn-ghost btn-sm" onclick="showPanel('orders')">View All</button></div>
+          <div id="ov-orders"></div>
+        </div>
+        <div>
+          <div class="section-header"><h3>Pending Actions</h3></div>
+          <div id="ov-actions"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ USERS ═══ -->
+    <div class="panel" id="panel-users">
+      <div class="page-header"><div><h2>Manage <em>Users</em></h2></div>
+        <div class="page-actions">
+          <select id="role-filter" onchange="loadUsers()" style="width:140px">
+            <option value="">All Roles</option>
+            <option value="buyer">Buyers</option>
+            <option value="seller">Sellers</option>
+            <option value="delivery">Delivery</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Phone</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody id="users-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ ALL ORDERS ═══ -->
+    <div class="panel" id="panel-orders">
+      <div class="page-header"><div><h2>All <em>Orders</em></h2></div>
+        <div class="page-actions">
+          <select id="order-status-filter" onchange="loadOrders()" style="width:150px">
+            <option value="">All Statuses</option>
+            <option value="placed">Placed</option>
+            <option value="assigned">Assigned</option>
+            <option value="picked">Picked</option>
+            <option value="delivered">Delivered</option>
+            <option value="returned">Returned</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Order ID</th><th>Buyer</th><th>Seller</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="orders-tbody"><tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ PAYMENTS ═══ -->
+    <div class="panel" id="panel-payments">
+      <div class="page-header"><div><h2>Payment <em>Control</em></h2></div></div>
+      <div class="stats-grid mb-3">
+        <div class="stat-card"><div class="stat-icon">🏦</div><div class="stat-value" id="pay-wallet">₹0</div><div class="stat-label">In Admin Wallet</div></div>
+        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="pay-released">₹0</div><div class="stat-label">Released</div></div>
+        <div class="stat-card"><div class="stat-icon">⏸️</div><div class="stat-value" id="pay-held">₹0</div><div class="stat-label">Held / Dispute</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Order ID</th><th>Seller</th><th>Buyer</th><th>Amount</th><th>Method</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="payments-tbody"><tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ ASSIGN DELIVERIES ═══ -->
+    <div class="panel" id="panel-deliveries">
+      <div class="page-header"><div><h2>Assign <em>Deliveries</em></h2><div class="page-breadcrumb">Orders waiting for a delivery partner</div></div></div>
+      <div id="assign-list">
+        <div class="empty-state"><div class="es-icon">⏳</div><h3>Loading…</h3></div>
+      </div>
+    </div>
+
+    <!-- ═══ PRODUCTS ═══ -->
+    <div class="panel" id="panel-products">
+      <div class="page-header"><div><h2>All <em>Products</em></h2></div></div>
+      <div class="products-grid" id="products-grid">
+        <div class="empty-state" style="grid-column:1/-1"><div class="es-icon">⏳</div><h3>Loading…</h3></div>
+      </div>
+    </div>
+
+    <!-- ═══ PROFILE ═══ -->
+    <div class="panel" id="panel-profile">
+      <div class="page-header"><div><h2>Admin <em>Profile</em></h2></div></div>
+      <div class="profile-wrap">
+        <div class="profile-card mb-2">
+          <div class="profile-cover" style="background:linear-gradient(135deg,#1a0808,#2a1010)">
+            <div class="profile-avatar-wrap" id="profile-avatar-container"></div>
+          </div>
+          <div class="profile-info">
+            <div class="profile-name" id="profile-name-display">Admin</div>
+            <div class="profile-role" style="background:rgba(196,83,90,0.12);border-color:rgba(196,83,90,0.3);color:var(--rose-light)">🛠️ Administrator</div>
+            <p class="text-muted mt-1" style="font-size:12px">Click your photo to upload a new avatar</p>
+          </div>
+        </div>
+        <div class="card mb-2">
+          <div class="card-header"><h3>Account Information</h3></div>
+          <div class="flex flex-col gap-2">
+            <div class="form-row">
+              <div class="form-group"><label>Full Name</label><input type="text" id="p-name" /></div>
+              <div class="form-group"><label>Phone</label><input type="tel" id="p-phone" /></div>
+            </div>
+            <div class="form-group"><label>Email</label><input type="email" id="p-email" disabled /></div>
+            <button class="btn btn-primary" id="save-profile-btn" onclick="saveProfile()">Save Changes</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Security</h3></div>
+          <button class="btn btn-secondary btn-full" onclick="doResetPassword()">🔑 Change Password</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Assign Delivery Modal -->
+<div class="modal-overlay hidden" id="assign-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Assign Delivery Partner</h3>
+      <button class="modal-close" onclick="document.getElementById('assign-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="assign-order-id" />
+      <p class="text-muted mb-2" style="font-size:13px">Select a delivery partner for order <strong id="assign-order-ref"></strong></p>
+      <div class="form-group">
+        <label>Delivery Partner</label>
+        <select id="assign-partner-select">
+          <option value="">Choose a delivery partner…</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('assign-modal').classList.add('hidden')">Cancel</button>
+      <button class="btn btn-primary" id="confirm-assign-btn" onclick="confirmAssign()">Assign 🚚</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/config.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/utils.js"></script>
+<script>
+let USER = null;
+let DELIVERY_PARTNERS = [];
+const DEMO = sessionStorage.getItem('pr_demo') === '1';
+
+window.addEventListener('load', async () => {
+  await delay(1600); hideSplash();
+  if (DEMO) { USER = demoAdminUser(); init(); return; }
+  USER = await requireRole('admin');
+  if (!USER) return;
+  init();
+});
+
+function init() {
+  document.getElementById('sb-name').textContent   = USER.name || 'Admin';
+  document.getElementById('sb-email').textContent  = USER.email || '';
+  document.getElementById('sb-avatar').innerHTML   = renderAvatar(USER,'avatar-md');
+  document.getElementById('topbar-avatar').innerHTML = renderAvatar(USER,'avatar-sm');
+  document.getElementById('app').classList.remove('hidden');
+  window.showPanel('overview');
+}
+
+window.showPanel = function(id) {
+  ['overview','users','orders','payments','deliveries','products','profile'].forEach(p => {
+    document.getElementById(`panel-${p}`)?.classList.toggle('active', p === id);
+  });
+  setActiveNav(id);
+  closeSidebar();
+  loadPanel(id);
+};
+
+async function loadPanel(id) {
+  if (id === 'overview')   await loadOverview();
+  if (id === 'users')      await loadUsers();
+  if (id === 'orders')     await loadOrders();
+  if (id === 'payments')   await loadPayments();
+  if (id === 'deliveries') await loadAssignDeliveries();
+  if (id === 'products')   await loadProducts();
+  if (id === 'profile')    loadProfileForm();
+}
+
+// ── OVERVIEW ──
+async function loadOverview() {
+  let users, orders, payments;
+  if (DEMO) {
+    users    = demoUsers();
+    orders   = demoOrders();
+    payments = demoPayments();
+  } else {
+    const [ud, od, pd] = await Promise.all([
+      window.sb.from('users').select('id,role'),
+      window.sb.from('orders').select('*').order('created_at', { ascending:false }),
+      window.sb.from('payments').select('amount,status')
+    ]);
+    users = ud.data || []; orders = od.data || []; payments = pd.data || [];
+  }
+
+  const sellers    = users.filter(u => u.role === 'seller').length;
+  const revenue    = orders.reduce((s,o) => s+Number(o.total_amount||0), 0);
+  const pending    = orders.filter(o => (o.order_status||o.status) === 'placed').length;
+  const walletAmt  = payments.filter(p => p.status === 'admin_wallet').reduce((s,p) => s+Number(p.amount||0), 0);
+
+  document.getElementById('st-users').textContent   = users.length;
+  document.getElementById('st-orders').textContent  = orders.length;
+  document.getElementById('st-revenue').textContent = fmtCurrency(revenue);
+  document.getElementById('st-sellers').textContent = sellers;
+  document.getElementById('st-pending').textContent = pending;
+  document.getElementById('st-wallet').textContent  = fmtCurrency(walletAmt);
+
+  if (pending > 0) { const b = document.getElementById('orders-badge'); b.textContent = pending; b.style.display = ''; }
+
+  const oel = document.getElementById('ov-orders');
+  oel.innerHTML = orders.slice(0,5).map(o => `
+    <div class="order-card" style="margin-bottom:10px">
+      <div class="order-header">
+        <div><div class="order-id">${shortId(o.id)}</div></div>
+        ${statusBadge(o.order_status||o.status)}
+      </div>
+      <div class="order-row"><span class="order-label">Amount</span><span class="text-gold">${fmtCurrency(o.total_amount)}</span></div>
+      <div class="order-row"><span class="order-label">Payment</span>${paymentBadge(o.payment_type)}</div>
+    </div>`).join('') || `<div class="empty-state"><div class="es-icon">📦</div><h3>No orders</h3></div>`;
+
+  const ael = document.getElementById('ov-actions');
+  const unassigned = orders.filter(o => (o.order_status||o.status) === 'placed');
+  const toRelease  = payments.filter(p => p.status === 'admin_wallet');
+  ael.innerHTML = [
+    ...unassigned.slice(0,3).map(o => `
+      <div class="card" style="margin-bottom:10px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:11px;color:var(--text-dim)">Unassigned Order</div>
+            <div style="font-size:14px;margin-top:2px">${shortId(o.id)} — ${fmtCurrency(o.total_amount)}</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAssignModal('${o.id}')">Assign 🚚</button>
+        </div>
+      </div>`),
+    ...toRelease.slice(0,3).map(p => `
+      <div class="card" style="margin-bottom:10px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:11px;color:var(--text-dim)">Ready to Release</div>
+            <div style="font-size:14px;margin-top:2px">${shortId(p.order_id || p.id)} — ${fmtCurrency(p.amount)}</div>
+          </div>
+          <button class="btn btn-success btn-sm" onclick="releasePayment('${p.id || p.order_id}')">Release 💰</button>
+        </div>
+      </div>`)
+  ].join('') || `<div class="empty-state"><div class="es-icon">✅</div><h3>All caught up!</h3></div>`;
+}
+
+// ── USERS ──
+async function loadUsers() {
+  const roleFilter = document.getElementById('role-filter')?.value || '';
+  let users;
+  if (DEMO) { users = demoUsers().filter(u => !roleFilter || u.role === roleFilter); }
+  else {
+    let q = window.sb.from('users').select('*').order('created_at', { ascending:false });
+    if (roleFilter) q = q.eq('role', roleFilter);
+    const { data } = await q;
+    users = data || [];
+  }
+  const tbody = document.getElementById('users-tbody');
+  tbody.innerHTML = users.length ? users.map(u => `
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${renderAvatar(u,'avatar-sm')}
+          <span>${u.name}</span>
+        </div>
+      </td>
+      <td class="text-muted">${u.email}</td>
+      <td>${roleBadge(u.role)}</td>
+      <td class="text-muted">${u.phone||'—'}</td>
+      <td>${u.is_banned ? statusBadge('banned') : u.is_verified ? statusBadge('verified') : statusBadge('unverified')}</td>
+      <td class="text-muted">${fmtDate(u.created_at)}</td>
+      <td>
+        <div class="td-actions">
+          ${!u.is_verified ? `<button class="btn btn-success btn-xs" onclick="verifyUser('${u.id}')">✅ Verify</button>` : ''}
+          ${!u.is_banned   ? `<button class="btn btn-danger btn-xs"  onclick="banUser('${u.id}')">🚫 Ban</button>` :
+                             `<button class="btn btn-secondary btn-xs" onclick="unbanUser('${u.id}')">Unban</button>`}
+        </div>
+      </td>
+    </tr>`).join('') : `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">No users found</td></tr>`;
+}
+
+async function verifyUser(id) {
+  if (DEMO) { toast('User verified ✅', 'success'); loadUsers(); return; }
+  await window.sb.from('users').update({ is_verified:true }).eq('id', id);
+  toast('User verified ✅', 'success'); loadUsers();
+}
+async function banUser(id) {
+  if (!confirmAction('Ban this user? They will not be able to login.')) return;
+  if (DEMO) { toast('User banned', 'success'); loadUsers(); return; }
+  await window.sb.from('users').update({ is_banned:true }).eq('id', id);
+  toast('User banned', 'success'); loadUsers();
+}
+async function unbanUser(id) {
+  if (DEMO) { toast('User unbanned ✅', 'success'); loadUsers(); return; }
+  await window.sb.from('users').update({ is_banned:false }).eq('id', id);
+  toast('User unbanned ✅', 'success'); loadUsers();
+}
+
+// ── ORDERS ──
+async function loadOrders() {
+  const statusFilter = document.getElementById('order-status-filter')?.value || '';
+  let orders;
+  if (DEMO) { orders = demoOrders().filter(o => !statusFilter || (o.order_status||o.status) === statusFilter); }
+  else {
+    let q = window.sb.from('orders').select('*, users!buyer_id(name), sellers_user:users!seller_id(name)').order('created_at', { ascending:false });
+    if (statusFilter) q = q.eq('order_status', statusFilter);
+    const { data } = await q;
+    orders = data || [];
+  }
+  const tbody = document.getElementById('orders-tbody');
+  tbody.innerHTML = orders.length ? orders.map(o => {
+    const status = o.order_status||o.status;
+    return `<tr>
+      <td><code>${shortId(o.id)}</code></td>
+      <td>${o.buyer_name||o.users?.name||'—'}</td>
+      <td>${o.seller_name||o['sellers_user']?.name||'—'}</td>
+      <td class="text-gold">${fmtCurrency(o.total_amount)}</td>
+      <td>${paymentBadge(o.payment_type)}</td>
+      <td>${statusBadge(status)}</td>
+      <td class="text-muted">${fmtDate(o.created_at||o.date)}</td>
+      <td>
+        <div class="td-actions">
+          ${status === 'placed' ? `<button class="btn btn-primary btn-xs" onclick="openAssignModal('${o.id}')">🚚 Assign</button>` : ''}
+          ${status === 'delivered' ? `<button class="btn btn-success btn-xs" onclick="releaseByOrderId('${o.id}')">💰 Release</button>` : ''}
+          ${status === 'returned'  ? `<button class="btn btn-danger btn-xs" onclick="cancelOrder('${o.id}')">🚫 Cancel</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px">No orders found</td></tr>`;
+}
+
+// ── PAYMENTS ──
+async function loadPayments() {
+  let payments;
+  if (DEMO) { payments = demoPayments(); }
+  else {
+    const { data } = await window.sb.from('payments').select('*, sellers:users!seller_id(name), buyers:users!buyer_id(name)').order('created_at', { ascending:false });
+    payments = data || [];
+  }
+  const walletAmt   = payments.filter(p => p.status === 'admin_wallet').reduce((s,p) => s+Number(p.amount||0), 0);
+  const releasedAmt = payments.filter(p => p.status === 'released').reduce((s,p) => s+Number(p.amount||0), 0);
+  const heldAmt     = payments.filter(p => p.status === 'held' || p.status === 'returned').reduce((s,p) => s+Number(p.amount||0), 0);
+  document.getElementById('pay-wallet').textContent   = fmtCurrency(walletAmt);
+  document.getElementById('pay-released').textContent = fmtCurrency(releasedAmt);
+  document.getElementById('pay-held').textContent     = fmtCurrency(heldAmt);
+  const tbody = document.getElementById('payments-tbody');
+  tbody.innerHTML = payments.length ? payments.map(p => `
+    <tr>
+      <td><code>${shortId(p.order_id||p.id)}</code></td>
+      <td>${p.seller_name||p.sellers?.name||'—'}</td>
+      <td>${p.buyer_name||p.buyers?.name||'—'}</td>
+      <td class="text-gold">${fmtCurrency(p.amount)}</td>
+      <td>${paymentBadge(p.payment_method)}</td>
+      <td>${statusBadge(p.status)}</td>
+      <td class="text-muted">${fmtDate(p.created_at)}</td>
+      <td>
+        <div class="td-actions">
+          ${p.status === 'admin_wallet' ? `<button class="btn btn-success btn-xs" onclick="releasePayment('${p.id}')">💰 Release to Seller</button>` : ''}
+          ${p.status === 'admin_wallet' ? `<button class="btn btn-danger btn-xs" onclick="holdPayment('${p.id}')">⏸ Hold</button>` : ''}
+          ${p.status === 'held' ? `<button class="btn btn-success btn-xs" onclick="releasePayment('${p.id}')">Release</button>` : ''}
+        </div>
+      </td>
+    </tr>`).join('') : `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px">No payments</td></tr>`;
+}
+
+async function releasePayment(paymentId) {
+  if (!confirmAction('Release this payment to the seller?')) return;
+  if (DEMO) { toast('Payment released to seller ✅', 'success'); loadPayments(); return; }
+  const { error } = await window.sb.from('payments').update({ status:'released' }).eq('id', paymentId);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Payment released to seller ✅', 'success'); loadPayments();
+}
+
+async function releaseByOrderId(orderId) {
+  if (!confirmAction('Release payment for this order?')) return;
+  if (DEMO) { toast('Payment released ✅', 'success'); loadOrders(); return; }
+  await window.sb.from('payments').update({ status:'released' }).eq('order_id', orderId);
+  toast('Payment released ✅', 'success'); loadOrders();
+}
+
+async function holdPayment(paymentId) {
+  if (DEMO) { toast('Payment held', 'success'); loadPayments(); return; }
+  await window.sb.from('payments').update({ status:'held' }).eq('id', paymentId);
+  toast('Payment held ⏸', 'success'); loadPayments();
+}
+
+async function cancelOrder(orderId) {
+  if (!confirmAction('Cancel this order?')) return;
+  if (DEMO) { toast('Order cancelled', 'success'); loadOrders(); return; }
+  await window.sb.from('orders').update({ order_status:'cancelled', payment_status:'returned' }).eq('id', orderId);
+  toast('Order cancelled', 'success'); loadOrders();
+}
+
+// ── ASSIGN DELIVERY ──
+async function loadAssignDeliveries() {
+  let orders;
+  if (DEMO) { orders = demoOrders().filter(o => (o.order_status||o.status) === 'placed'); }
+  else {
+    const { data } = await window.sb.from('orders').select('*, users!buyer_id(name), products(name)').eq('order_status','placed').order('created_at', { ascending:false });
+    orders = data || [];
+  }
+  const el = document.getElementById('assign-list');
+  if (!orders.length) {
+    el.innerHTML = `<div class="empty-state"><div class="es-icon">✅</div><h3>All orders are assigned</h3></div>`;
+    return;
+  }
+  el.innerHTML = orders.map(o => `
+    <div class="order-card" style="margin-bottom:14px">
+      <div class="order-header">
+        <div>
+          <div class="order-id">${shortId(o.id)}</div>
+          <div class="order-product">${o.product_name||o.products?.name||'Product'}</div>
+        </div>
+        <div>${statusBadge(o.order_status||o.status)}</div>
+      </div>
+      <div class="order-meta">
+        <div class="order-row"><span class="order-label">Buyer</span>${o.buyer_name||o.users?.name||'—'}</div>
+        <div class="order-row"><span class="order-label">Deliver to</span><span>${o.drop_address||'—'}</span></div>
+        <div class="order-row"><span class="order-label">Amount</span><span class="text-gold">${fmtCurrency(o.total_amount)}</span></div>
+        <div class="order-row"><span class="order-label">Payment</span>${paymentBadge(o.payment_type)}</div>
+      </div>
+      <div class="order-actions">
+        <button class="btn btn-primary btn-sm" onclick="openAssignModal('${o.id}')">🚚 Assign Delivery Partner</button>
+      </div>
+    </div>`).join('');
+}
+
+async function loadDeliveryPartners() {
+  if (DEMO) return [
+    { id:'dp1', name:'Arjun Kumar' },
+    { id:'dp2', name:'Kavita Nair' },
+    { id:'dp3', name:'Rohit Verma' },
+  ];
+  const { data } = await window.sb.from('users').select('id,name').eq('role','delivery').eq('is_banned',false);
+  return data || [];
+}
+
+async function openAssignModal(orderId) {
+  document.getElementById('assign-order-id').value = orderId;
+  document.getElementById('assign-order-ref').textContent = shortId(orderId);
+  DELIVERY_PARTNERS = await loadDeliveryPartners();
+  const sel = document.getElementById('assign-partner-select');
+  sel.innerHTML = `<option value="">Choose a delivery partner…</option>` +
+    DELIVERY_PARTNERS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  document.getElementById('assign-modal').classList.remove('hidden');
+}
+
+async function confirmAssign() {
+  const orderId   = document.getElementById('assign-order-id').value;
+  const partnerId = document.getElementById('assign-partner-select').value;
+  if (!partnerId) { toast('Please select a delivery partner', 'error'); return; }
+  setBtn('confirm-assign-btn', true);
+  try {
+    if (DEMO) {
+      await delay(400);
+      toast('Delivery partner assigned ✅', 'success');
+      document.getElementById('assign-modal').classList.add('hidden');
+      loadAssignDeliveries(); return;
+    }
+    const partnerName = DELIVERY_PARTNERS.find(p => p.id === partnerId)?.name || 'Partner';
+    const { error } = await window.sb.from('orders').update({ delivery_partner_id: partnerId, order_status:'assigned' }).eq('id', orderId);
+    if (error) throw error;
+    // Add pickup address from seller
+    toast(`Assigned to ${partnerName} ✅`, 'success');
+    document.getElementById('assign-modal').classList.add('hidden');
+    loadAssignDeliveries();
+  } catch(e) { toast(e.message, 'error'); }
+  finally { setBtn('confirm-assign-btn', false, 'Assign 🚚'); }
+}
+
+// ── PRODUCTS ──
+async function loadProducts() {
+  let products;
+  if (DEMO) { products = demoProducts(); }
+  else {
+    const { data } = await window.sb.from('products').select('*, users!seller_id(name)').eq('is_active',true).order('created_at', { ascending:false });
+    products = data || [];
+  }
+  const grid = document.getElementById('products-grid');
+  grid.innerHTML = products.length ? products.map(p => `
+    <div class="product-card">
+      <div class="product-img">
+        ${p.image_url ? `<img src="${p.image_url}" onerror="this.parentElement.innerHTML='${prodEmoji(p.category)}'" />` : prodEmoji(p.category)}
+        <span class="product-cat-badge">${p.category}</span>
+      </div>
+      <div class="product-body">
+        <div class="product-name">${p.name}</div>
+        <div class="product-desc">${p.description||'—'}</div>
+        <div class="product-footer">
+          <div class="product-price"><sup>₹</sup>${Number(p.price).toLocaleString('en-IN')}</div>
+          <div class="product-qty">${p.quantity} left</div>
+        </div>
+      </div>
+      <div class="product-actions" style="flex-direction:column;gap:4px">
+        <div class="text-xs text-muted">Seller: ${p.seller_name||p.users?.name||'—'}</div>
+        <button class="btn btn-danger btn-sm w-full" onclick="deactivateProduct('${p.id}')">🗑️ Deactivate</button>
+      </div>
+    </div>`).join('')
+    : `<div class="empty-state" style="grid-column:1/-1"><div class="es-icon">🌸</div><h3>No products</h3></div>`;
+}
+
+async function deactivateProduct(id) {
+  if (!confirmAction('Deactivate this product?')) return;
+  if (DEMO) { toast('Product deactivated', 'success'); loadProducts(); return; }
+  await window.sb.from('products').update({ is_active:false }).eq('id', id);
+  toast('Product deactivated', 'success'); loadProducts();
+}
+
+// ── PROFILE ──
+function loadProfileForm() {
+  document.getElementById('p-name').value  = USER.name  || '';
+  document.getElementById('p-phone').value = USER.phone || '';
+  document.getElementById('p-email').value = USER.email || '';
+  document.getElementById('profile-name-display').textContent = USER.name || 'Admin';
+  document.getElementById('profile-avatar-container').innerHTML = renderUploadableAvatar(USER, 'avatar-xl');
+}
+
+function onAvatarFileChange(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (DEMO) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.querySelectorAll('.user-avatar-img').forEach(el => el.src = e.target.result);
+      toast('Avatar updated (Demo)', 'success');
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+  handleAvatarUpload(file, document.getElementById('profile-avatar-container').querySelector('.avatar'), USER.id, url => {
+    USER.avatar_url = url;
+    document.getElementById('sb-avatar').innerHTML = renderAvatar(USER,'avatar-md');
+    document.getElementById('topbar-avatar').innerHTML = renderAvatar(USER,'avatar-sm');
+  });
+}
+
+async function saveProfile() {
+  const name  = document.getElementById('p-name').value.trim();
+  const phone = document.getElementById('p-phone').value.trim();
+  if (!name) { toast('Name is required', 'error'); return; }
+  setBtn('save-profile-btn', true);
+  try {
+    if (DEMO) {
+      USER = { ...USER, name, phone };
+      document.getElementById('sb-name').textContent = name;
+      document.getElementById('profile-name-display').textContent = name;
+      toast('Saved ✅', 'success'); return;
+    }
+    await window.sb.from('users').update({ name, phone:phone||null }).eq('id', USER.id);
+    USER = { ...USER, name, phone };
+    document.getElementById('sb-name').textContent = name;
+    document.getElementById('profile-name-display').textContent = name;
+    toast('Profile saved ✅', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+  finally { setBtn('save-profile-btn', false, 'Save Changes'); }
+}
+
+async function doResetPassword() {
+  if (DEMO) { toast('Demo mode', 'info'); return; }
+  await window.sb.auth.resetPasswordForEmail(USER.email);
+  toast('Password reset sent ✅', 'success');
+}
+
+// ── HELPERS ──
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function hideSplash() {
+  const s = document.getElementById('loading-screen');
+  s.style.opacity = '0'; setTimeout(() => s.style.display = 'none', 600);
+}
+
+// ── DEMO DATA ──
+function demoAdminUser() {
+  return { id:'demo-admin', name:'Admin User', email:'admin@petalrush.com', role:'admin', phone:'+91 9000000000', avatar_url:'', is_verified:true };
+}
+function demoUsers() {
+  return [
+    { id:'u1', name:'Priya Sharma', email:'priya@demo.com', role:'buyer', phone:'+91 9000000001', is_verified:true, is_banned:false, created_at:'2024-01-10' },
+    { id:'u2', name:'Rose Garden Co.', email:'seller@demo.com', role:'seller', phone:'+91 9000000002', is_verified:true, is_banned:false, created_at:'2024-01-08' },
+    { id:'u3', name:'Arjun Kumar', email:'delivery@demo.com', role:'delivery', phone:'+91 9000000003', is_verified:false, is_banned:false, created_at:'2024-01-12' },
+    { id:'u4', name:'Rahul Mehta', email:'rahul@demo.com', role:'buyer', phone:'+91 9000000004', is_verified:true, is_banned:false, created_at:'2024-01-14' },
+  ];
+}
+function demoOrders() {
+  return [
+    { id:'ord-001', buyer_name:'Priya Sharma', seller_name:'Rose Garden', product_name:'Red Rose Bouquet', total_amount:699, payment_type:'online', order_status:'delivered', drop_address:'Andheri West, Mumbai', created_at:'2024-01-15', date:'2024-01-15' },
+    { id:'ord-002', buyer_name:'Rahul Mehta', seller_name:'Rose Garden', product_name:'Sunflower Delight', total_amount:449, payment_type:'cod', order_status:'picked', drop_address:'Bandra East, Mumbai', created_at:'2024-01-16', date:'2024-01-16' },
+    { id:'ord-003', buyer_name:'Aarav Singh', seller_name:'Lily Store', product_name:'White Lily Bundle', total_amount:599, payment_type:'online', order_status:'placed', drop_address:'Pune, Koregaon Park', created_at:'2024-01-17', date:'2024-01-17' },
+    { id:'ord-004', buyer_name:'Neha Gupta', seller_name:'Lily Store', product_name:'Orchid Elegance', total_amount:1299, payment_type:'online', order_status:'returned', drop_address:'Goregaon, Mumbai', created_at:'2024-01-18', date:'2024-01-18' },
+  ];
+}
+function demoPayments() {
+  return [
+    { id:'pay-001', order_id:'ord-001', seller_name:'Rose Garden', buyer_name:'Priya Sharma', amount:699, payment_method:'online', status:'admin_wallet', created_at:'2024-01-15' },
+    { id:'pay-002', order_id:'ord-002', seller_name:'Rose Garden', buyer_name:'Rahul Mehta', amount:449, payment_method:'cod', status:'pending', created_at:'2024-01-16' },
+    { id:'pay-003', order_id:'ord-004', seller_name:'Lily Store', buyer_name:'Neha Gupta', amount:1299, payment_method:'online', status:'returned', created_at:'2024-01-18' },
+  ];
+}
+function demoProducts() {
+  return [
+    { id:'p1', name:'Red Rose Bouquet', description:'Fresh red roses', price:699, quantity:25, category:'bouquets', image_url:'', seller_name:'Rose Garden Co.' },
+    { id:'p2', name:'Orchid Elegance', description:'Premium orchid', price:1299, quantity:5, category:'plants', image_url:'', seller_name:'Lily Store' },
+  ];
+}
+</script>
+</body>
+</html>
