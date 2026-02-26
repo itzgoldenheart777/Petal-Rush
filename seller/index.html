@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Petal Rush — Seller</title>
+<link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+<div id="loading-screen">
+  <div class="loading-logo">Petal Rush</div>
+  <div class="loading-sub">Seller Dashboard</div>
+  <div class="loading-bar"></div>
+</div>
+<div id="toast-container"></div>
+
+<div class="dashboard-wrap hidden" id="app">
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <h1>Petal Rush</h1>
+      <div class="sidebar-role-tag">🏪 Seller</div>
+    </div>
+    <div class="sidebar-user" onclick="showPanel('profile')">
+      <div id="sb-avatar"></div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sb-name">Loading…</div>
+        <div class="sidebar-user-email" id="sb-shop">…</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Store</div>
+      <button class="nav-item active" data-panel="overview" onclick="showPanel('overview')"><span class="nav-icon">📊</span> Dashboard</button>
+      <button class="nav-item" data-panel="products" onclick="showPanel('products')"><span class="nav-icon">🌺</span> My Products</button>
+      <button class="nav-item" data-panel="orders" onclick="showPanel('orders')"><span class="nav-icon">📦</span> Orders</button>
+      <button class="nav-item" data-panel="payments" onclick="showPanel('payments')"><span class="nav-icon">💰</span> Payments</button>
+      <div class="nav-section">Account</div>
+      <button class="nav-item" data-panel="profile" onclick="showPanel('profile')"><span class="nav-icon">👤</span> My Profile</button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="nav-item w-full" onclick="logout()"><span class="nav-icon">🚪</span> Sign Out</button>
+    </div>
+  </nav>
+
+  <div class="topbar">
+    <button class="topbar-menu" onclick="toggleSidebar()">☰</button>
+    <div class="topbar-brand">Seller Panel</div>
+    <div id="topbar-avatar" onclick="showPanel('profile')" style="cursor:pointer"></div>
+  </div>
+
+  <main class="main-content">
+
+    <!-- ═══ OVERVIEW ═══ -->
+    <div class="panel active" id="panel-overview">
+      <div class="page-header">
+        <div><h2>My <em>Dashboard</em></h2><div class="page-breadcrumb">Your store at a glance</div></div>
+      </div>
+      <div class="stats-grid" id="seller-stats">
+        <div class="stat-card"><div class="stat-icon">🌺</div><div class="stat-value" id="stat-products">—</div><div class="stat-label">My Products</div></div>
+        <div class="stat-card"><div class="stat-icon">🛒</div><div class="stat-value" id="stat-orders">—</div><div class="stat-label">Total Orders</div></div>
+        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" id="stat-revenue">—</div><div class="stat-label">Total Revenue</div></div>
+        <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value" id="stat-pending">—</div><div class="stat-label">Pending</div></div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="section-header"><h3>Recent Orders</h3><button class="btn btn-ghost btn-sm" onclick="showPanel('orders')">View All</button></div>
+          <div id="overview-orders"></div>
+        </div>
+        <div>
+          <div class="section-header"><h3>Top Products</h3><button class="btn btn-ghost btn-sm" onclick="showPanel('products')">Manage</button></div>
+          <div id="overview-products"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PRODUCTS ═══ -->
+    <div class="panel" id="panel-products">
+      <div class="page-header">
+        <div><h2>My <em>Products</em></h2></div>
+        <div class="page-actions">
+          <button class="btn btn-primary" onclick="openProductForm()">+ Add Product</button>
+        </div>
+      </div>
+      <div class="products-grid" id="products-grid">
+        <div class="empty-state" style="grid-column:1/-1"><div class="es-icon">⏳</div><h3>Loading…</h3></div>
+      </div>
+    </div>
+
+    <!-- ═══ ORDERS ═══ -->
+    <div class="panel" id="panel-orders">
+      <div class="page-header"><div><h2>My <em>Orders</em></h2></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Order ID</th><th>Buyer</th><th>Product</th><th>Qty</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody id="orders-tbody"><tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ PAYMENTS ═══ -->
+    <div class="panel" id="panel-payments">
+      <div class="page-header"><div><h2>My <em>Payments</em></h2></div></div>
+      <div class="stats-grid mb-3">
+        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="pay-released">₹0</div><div class="stat-label">Released</div></div>
+        <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value" id="pay-pending">₹0</div><div class="stat-label">Pending</div></div>
+        <div class="stat-card"><div class="stat-icon">↩️</div><div class="stat-value" id="pay-returned">₹0</div><div class="stat-label">Returned</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Order ID</th><th>Amount</th><th>Status</th><th>Method</th><th>Date</th></tr></thead>
+          <tbody id="payments-tbody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ PROFILE ═══ -->
+    <div class="panel" id="panel-profile">
+      <div class="page-header"><div><h2>My <em>Profile</em></h2></div></div>
+      <div class="profile-wrap">
+        <div class="profile-card mb-2">
+          <div class="profile-cover">
+            <div class="profile-avatar-wrap" id="profile-avatar-container"></div>
+          </div>
+          <div class="profile-info">
+            <div class="profile-name" id="profile-name-display">—</div>
+            <div class="profile-role">🏪 Seller</div>
+            <p class="text-muted mt-1" style="font-size:12px">Click your photo to upload a new avatar</p>
+          </div>
+        </div>
+        <div class="card mb-2">
+          <div class="card-header"><h3>Personal Information</h3></div>
+          <div class="flex flex-col gap-2">
+            <div class="form-row">
+              <div class="form-group"><label>Full Name</label><input type="text" id="p-name" /></div>
+              <div class="form-group"><label>Shop Name</label><input type="text" id="p-shop" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Phone</label><input type="tel" id="p-phone" /></div>
+              <div class="form-group"><label>Email</label><input type="email" id="p-email" disabled /></div>
+            </div>
+            <div class="form-group">
+              <label>Shop / Pickup Address</label>
+              <div class="flex gap-1">
+                <input type="text" id="p-addr" placeholder="Your shop location" style="flex:1" />
+                <button class="btn btn-secondary btn-sm" id="p-gps-btn" onclick="detectGPS('p-addr','p-gps-btn')">📍 GPS</button>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="save-profile-btn" onclick="saveProfile()">Save Changes</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Security</h3></div>
+          <button class="btn btn-secondary btn-full" onclick="doResetPassword()">🔑 Change Password</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Product Form Modal -->
+<div class="modal-overlay hidden" id="product-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="pf-title">Add Product</h3>
+      <button class="modal-close" onclick="closeProductModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pf-id" />
+      <div class="flex flex-col gap-2">
+        <div class="form-row">
+          <div class="form-group"><label>Product Name *</label><input type="text" id="pf-name" placeholder="Red Rose Bouquet" /></div>
+          <div class="form-group"><label>Category</label>
+            <select id="pf-cat">
+              <option value="flowers">🌸 Flowers</option>
+              <option value="bouquets">💐 Bouquets</option>
+              <option value="plants">🪴 Plants</option>
+              <option value="gifts">🎁 Gifts</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>Description</label><textarea id="pf-desc" placeholder="Fresh, hand-picked…"></textarea></div>
+        <div class="form-row">
+          <div class="form-group"><label>Price (₹) *</label><input type="number" id="pf-price" placeholder="499" min="1" /></div>
+          <div class="form-group"><label>Quantity *</label><input type="number" id="pf-qty" placeholder="20" min="0" /></div>
+        </div>
+        <div class="form-group"><label>Image URL (optional)</label><input type="url" id="pf-img" placeholder="https://…" /></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeProductModal()">Cancel</button>
+      <button class="btn btn-primary" id="save-product-btn" onclick="saveProduct()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/config.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/utils.js"></script>
+<script>
+let USER = null;
+let MY_PRODUCTS = [];
+const DEMO = sessionStorage.getItem('pr_demo') === '1';
+
+window.addEventListener('load', async () => {
+  await delay(1600); hideSplash();
+  if (DEMO) {
+    USER = demoUser();
+    init();
+    return;
+  }
+  USER = await requireRole('seller');
+  if (!USER) return;
+  init();
+});
+
+function init() {
+  document.getElementById('sb-name').textContent = USER.name || 'Seller';
+  document.getElementById('sb-shop').textContent = USER.shop_name || USER.email || '';
+  document.getElementById('sb-avatar').innerHTML = renderAvatar(USER,'avatar-md');
+  document.getElementById('topbar-avatar').innerHTML = renderAvatar(USER,'avatar-sm');
+  document.getElementById('app').classList.remove('hidden');
+  window.showPanel('overview');
+}
+
+window.showPanel = function(id) {
+  ['overview','products','orders','payments','profile'].forEach(p => {
+    document.getElementById(`panel-${p}`)?.classList.toggle('active', p === id);
+  });
+  setActiveNav(id);
+  closeSidebar();
+  loadPanel(id);
+};
+
+async function loadPanel(id) {
+  if (id === 'overview')  await loadOverview();
+  if (id === 'products')  await loadProducts();
+  if (id === 'orders')    await loadOrders();
+  if (id === 'payments')  await loadPayments();
+  if (id === 'profile')   loadProfileForm();
+}
+
+// ── OVERVIEW ──
+async function loadOverview() {
+  let products, orders;
+  if (DEMO) {
+    products = demoProductData();
+    orders = demoOrderData();
+  } else {
+    const [pd, od] = await Promise.all([
+      window.sb.from('products').select('*').eq('seller_id', USER.id).eq('is_active', true),
+      window.sb.from('orders').select('*').eq('seller_id', USER.id).order('created_at', { ascending:false })
+    ]);
+    products = pd.data || [];
+    orders   = od.data || [];
+  }
+  MY_PRODUCTS = products;
+  const revenue = orders.reduce((s,o) => s + Number(o.total_amount||0), 0);
+  const pending = orders.filter(o => (o.order_status||o.status) === 'placed').length;
+  document.getElementById('stat-products').textContent = products.length;
+  document.getElementById('stat-orders').textContent   = orders.length;
+  document.getElementById('stat-revenue').textContent  = fmtCurrency(revenue);
+  document.getElementById('stat-pending').textContent  = pending;
+
+  // Recent orders
+  const oel = document.getElementById('overview-orders');
+  oel.innerHTML = orders.slice(0,4).map(o => `
+    <div class="order-card" style="margin-bottom:10px">
+      <div class="order-header">
+        <div><div class="order-id">${shortId(o.id)}</div></div>
+        ${statusBadge(o.order_status||o.status)}
+      </div>
+      <div class="order-row"><span class="order-label">Amount</span><span class="text-gold">${fmtCurrency(o.total_amount)}</span></div>
+    </div>`).join('') || `<div class="empty-state"><div class="es-icon">📦</div><h3>No orders yet</h3></div>`;
+
+  // Top products
+  const pel = document.getElementById('overview-products');
+  pel.innerHTML = products.slice(0,4).map(p => `
+    <div class="card" style="margin-bottom:10px;padding:14px">
+      <div class="flex justify-between items-center">
+        <span style="font-family:'Cormorant Garamond',serif;font-size:16px">${p.name}</span>
+        <span class="text-gold">${fmtCurrency(p.price)}</span>
+      </div>
+      <div class="text-muted text-xs mt-1">${p.quantity} in stock • ${p.category}</div>
+    </div>`).join('') || `<div class="empty-state"><div class="es-icon">🌸</div><h3>No products yet</h3></div>`;
+}
+
+// ── PRODUCTS ──
+async function loadProducts() {
+  let products;
+  if (DEMO) { products = demoProductData(); }
+  else {
+    const { data } = await window.sb.from('products').select('*').eq('seller_id', USER.id).order('created_at', { ascending:false });
+    products = data || [];
+  }
+  MY_PRODUCTS = products;
+  const grid = document.getElementById('products-grid');
+  if (!products.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="es-icon">🌸</div><h3>No products yet</h3><button class="btn btn-primary mt-2" onclick="openProductForm()">+ Add First Product</button></div>`;
+    return;
+  }
+  grid.innerHTML = products.map(p => `
+    <div class="product-card">
+      <div class="product-img">
+        ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}" onerror="this.parentElement.innerHTML='${prodEmoji(p.category)}'" />` : prodEmoji(p.category)}
+        <span class="product-cat-badge">${p.category}</span>
+      </div>
+      <div class="product-body">
+        <div class="product-name">${p.name}</div>
+        <div class="product-desc">${p.description||'—'}</div>
+        <div class="product-footer">
+          <div class="product-price"><sup>₹</sup>${Number(p.price).toLocaleString('en-IN')}</div>
+          <div class="product-qty">${p.quantity} left</div>
+        </div>
+      </div>
+      <div class="product-actions">
+        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="openProductForm('${p.id}')">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" style="flex:1" onclick="deleteProduct('${p.id}')">🗑️ Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── PRODUCT FORM ──
+function openProductForm(id) {
+  document.getElementById('pf-id').value = id || '';
+  if (id) {
+    const p = MY_PRODUCTS.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('pf-title').textContent = 'Edit Product';
+    document.getElementById('pf-name').value  = p.name;
+    document.getElementById('pf-desc').value  = p.description || '';
+    document.getElementById('pf-price').value = p.price;
+    document.getElementById('pf-qty').value   = p.quantity;
+    document.getElementById('pf-img').value   = p.image_url || '';
+    document.getElementById('pf-cat').value   = p.category || 'flowers';
+  } else {
+    document.getElementById('pf-title').textContent = 'Add New Product';
+    ['pf-name','pf-desc','pf-price','pf-qty','pf-img'].forEach(i => document.getElementById(i).value = '');
+  }
+  document.getElementById('product-modal').classList.remove('hidden');
+}
+function closeProductModal() { document.getElementById('product-modal').classList.add('hidden'); }
+
+async function saveProduct() {
+  const name  = document.getElementById('pf-name').value.trim();
+  const price = parseFloat(document.getElementById('pf-price').value);
+  const qty   = parseInt(document.getElementById('pf-qty').value) || 0;
+  const desc  = document.getElementById('pf-desc').value.trim();
+  const img   = document.getElementById('pf-img').value.trim();
+  const cat   = document.getElementById('pf-cat').value;
+  const editId = document.getElementById('pf-id').value;
+  if (!name || !price) { toast('Name and price are required', 'error'); return; }
+  setBtn('save-product-btn', true);
+  try {
+    if (DEMO) {
+      await delay(400);
+      if (editId) {
+        const i = MY_PRODUCTS.findIndex(p => p.id === editId);
+        if (i !== -1) MY_PRODUCTS[i] = {...MY_PRODUCTS[i], name, price, quantity:qty, description:desc, image_url:img, category:cat};
+        toast('Product updated ✅', 'success');
+      } else {
+        MY_PRODUCTS.push({ id:'p'+Date.now(), seller_id:'demo', name, price, quantity:qty, description:desc, image_url:img, category:cat, is_active:true });
+        toast('Product added ✅', 'success');
+      }
+      closeProductModal(); loadProducts(); return;
+    }
+    const productData = { name, price, quantity:qty, description:desc, image_url:img||null, category:cat };
+    if (editId) {
+      const { error } = await window.sb.from('products').update(productData).eq('id', editId).eq('seller_id', USER.id);
+      if (error) throw error;
+      toast('Product updated ✅', 'success');
+    } else {
+      const { error } = await window.sb.from('products').insert({ ...productData, seller_id: USER.id });
+      if (error) throw error;
+      toast('Product added ✅', 'success');
+    }
+    closeProductModal(); loadProducts();
+  } catch(e) { toast(e.message, 'error'); }
+  finally { setBtn('save-product-btn', false, 'Save Product'); }
+}
+
+async function deleteProduct(id) {
+  if (!confirmAction('Delete this product?')) return;
+  if (DEMO) {
+    MY_PRODUCTS = MY_PRODUCTS.filter(p => p.id !== id);
+    toast('Product deleted', 'success'); loadProducts(); return;
+  }
+  const { error } = await window.sb.from('products').update({ is_active:false }).eq('id', id).eq('seller_id', USER.id);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Product deleted', 'success'); loadProducts();
+}
+
+// ── ORDERS ──
+async function loadOrders() {
+  let orders;
+  if (DEMO) { orders = demoOrderData(); }
+  else {
+    const { data } = await window.sb.from('orders').select('*, products(name), users!buyer_id(name)').eq('seller_id', USER.id).order('created_at', { ascending:false });
+    orders = data || [];
+  }
+  const tbody = document.getElementById('orders-tbody');
+  tbody.innerHTML = orders.length ? orders.map(o => `
+    <tr>
+      <td><code>${shortId(o.id)}</code></td>
+      <td>${o.buyer_name || o.users?.name || '—'}</td>
+      <td>${o.product_name || o.products?.name || '—'}</td>
+      <td>${o.quantity || 1}</td>
+      <td class="text-gold">${fmtCurrency(o.total_amount)}</td>
+      <td>${paymentBadge(o.payment_type)}</td>
+      <td>${statusBadge(o.order_status || o.status)}</td>
+      <td class="text-muted">${fmtDate(o.created_at || o.date)}</td>
+    </tr>`).join('') : `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px">No orders yet</td></tr>`;
+}
+
+// ── PAYMENTS ──
+async function loadPayments() {
+  let payments;
+  if (DEMO) { payments = demoPaymentData(); }
+  else {
+    const { data } = await window.sb.from('payments').select('*, orders(id)').eq('seller_id', USER.id).order('created_at', { ascending:false });
+    payments = data || [];
+  }
+  const released = payments.filter(p => p.status === 'released').reduce((s,p) => s+Number(p.amount||0), 0);
+  const pending  = payments.filter(p => ['pending','admin_wallet'].includes(p.status)).reduce((s,p) => s+Number(p.amount||0), 0);
+  const returned = payments.filter(p => p.status === 'returned').reduce((s,p) => s+Number(p.amount||0), 0);
+  document.getElementById('pay-released').textContent = fmtCurrency(released);
+  document.getElementById('pay-pending').textContent  = fmtCurrency(pending);
+  document.getElementById('pay-returned').textContent = fmtCurrency(returned);
+  const tbody = document.getElementById('payments-tbody');
+  tbody.innerHTML = payments.length ? payments.map(p => `
+    <tr>
+      <td><code>${shortId(p.order_id || p.id)}</code></td>
+      <td class="text-gold">${fmtCurrency(p.amount)}</td>
+      <td>${statusBadge(p.status)}</td>
+      <td>${paymentBadge(p.payment_method)}</td>
+      <td class="text-muted">${fmtDate(p.created_at)}</td>
+    </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px">No payments yet</td></tr>`;
+}
+
+// ── PROFILE ──
+function loadProfileForm() {
+  document.getElementById('p-name').value  = USER.name || '';
+  document.getElementById('p-phone').value = USER.phone || '';
+  document.getElementById('p-email').value = USER.email || '';
+  document.getElementById('p-addr').value  = USER.address || '';
+  document.getElementById('p-shop').value  = USER.shop_name || '';
+  document.getElementById('profile-name-display').textContent = USER.name || '—';
+  document.getElementById('profile-avatar-container').innerHTML = renderUploadableAvatar(USER, 'avatar-xl');
+}
+
+function onAvatarFileChange(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (DEMO) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.querySelectorAll('.user-avatar-img').forEach(el => el.src = e.target.result);
+      toast('Avatar preview updated (Demo)', 'success');
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+  handleAvatarUpload(file, document.getElementById('profile-avatar-container').querySelector('.avatar'), USER.id, url => {
+    USER.avatar_url = url;
+    document.getElementById('sb-avatar').innerHTML = renderAvatar(USER,'avatar-md');
+    document.getElementById('topbar-avatar').innerHTML = renderAvatar(USER,'avatar-sm');
+  });
+}
+
+async function saveProfile() {
+  const name  = document.getElementById('p-name').value.trim();
+  const phone = document.getElementById('p-phone').value.trim();
+  const addr  = document.getElementById('p-addr').value.trim();
+  const shop  = document.getElementById('p-shop').value.trim();
+  if (!name) { toast('Name is required', 'error'); return; }
+  setBtn('save-profile-btn', true);
+  try {
+    if (DEMO) {
+      USER = { ...USER, name, phone, address:addr, shop_name:shop };
+      document.getElementById('sb-name').textContent = name;
+      document.getElementById('sb-shop').textContent = shop;
+      document.getElementById('profile-name-display').textContent = name;
+      toast('Profile saved ✅', 'success'); return;
+    }
+    await window.sb.from('users').update({ name, phone:phone||null, address:addr||null }).eq('id', USER.id);
+    if (shop) await window.sb.from('sellers').update({ shop_name: shop }).eq('user_id', USER.id);
+    USER = { ...USER, name, phone, address:addr, shop_name:shop };
+    document.getElementById('sb-name').textContent = name;
+    document.getElementById('sb-shop').textContent = shop;
+    document.getElementById('profile-name-display').textContent = name;
+    toast('Profile saved ✅', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+  finally { setBtn('save-profile-btn', false, 'Save Changes'); }
+}
+
+async function doResetPassword() {
+  if (DEMO) { toast('Demo mode', 'info'); return; }
+  await window.sb.auth.resetPasswordForEmail(USER.email);
+  toast('Password reset email sent ✅', 'success');
+}
+
+// ── HELPERS ──
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function hideSplash() {
+  const s = document.getElementById('loading-screen');
+  s.style.opacity = '0'; setTimeout(() => s.style.display = 'none', 600);
+}
+function demoUser() {
+  return { id:'demo-seller', name:'Rose Garden Co.', email:'seller@demo.com', role:'seller', phone:'+91 9876543210', address:'Mumbai, Dadar', shop_name:'Rose Garden Co.', avatar_url:'', is_verified:true };
+}
+function demoProductData() {
+  return [
+    { id:'p1', seller_id:'demo-seller', name:'Red Rose Bouquet', description:'Fresh red roses', price:699, quantity:25, category:'bouquets', image_url:'', is_active:true },
+    { id:'p2', seller_id:'demo-seller', name:'Sunflower Delight', description:'Bright sunflowers', price:449, quantity:18, category:'flowers', image_url:'', is_active:true },
+    { id:'p3', seller_id:'demo-seller', name:'Lavender Bundle', description:'Calming lavender', price:349, quantity:30, category:'flowers', image_url:'', is_active:true },
+  ];
+}
+function demoOrderData() {
+  return [
+    { id:'ord-001', product_name:'Red Rose Bouquet', products:{name:'Red Rose Bouquet'}, users:{name:'Priya S.'}, buyer_name:'Priya S.', quantity:1, total_amount:699, payment_type:'online', order_status:'delivered', created_at:'2024-01-15' },
+    { id:'ord-002', product_name:'Sunflower Delight', products:{name:'Sunflower Delight'}, users:{name:'Rahul M.'}, buyer_name:'Rahul M.', quantity:2, total_amount:898, payment_type:'cod', order_status:'picked', created_at:'2024-01-16' },
+  ];
+}
+function demoPaymentData() {
+  return [
+    { id:'pay-001', order_id:'ord-001', amount:699, status:'released', payment_method:'online', created_at:'2024-01-15' },
+    { id:'pay-002', order_id:'ord-002', amount:898, status:'pending', payment_method:'cod', created_at:'2024-01-16' },
+  ];
+}
+</script>
+</body>
+</html>
