@@ -200,7 +200,9 @@
 let USER = null;
 let ALL_PRODUCTS = [];
 let SELECTED_PRODUCT = null;
-const DEMO = sessionStorage.getItem('pr_demo') === '1';
+
+// Permanently disabled demo for production
+const DEMO = false; 
 
 // ── INIT ──
 window.addEventListener('load', async () => {
@@ -210,20 +212,13 @@ window.addEventListener('load', async () => {
 });
 
 async function initDashboard() {
-  if (DEMO) {
-    USER = demoUser('buyer');
-    renderUser();
-    document.getElementById('app').classList.remove('hidden');
-    showPanel('shop');
-    loadPanel('shop');
-    return;
-  }
-  USER = await requireRole('buyer');
+  // PRODUCTION: Always verify real Supabase Auth
+  USER = await requireRole('buyer'); 
   if (!USER) return;
+  
   renderUser();
   document.getElementById('app').classList.remove('hidden');
   showPanel('shop');
-  loadPanel('shop');
 }
 
 function renderUser() {
@@ -244,10 +239,6 @@ function showPanel(id) {
   closeSidebar();
   loadPanel(id);
 }
-// Override panel switching to use local panels
-document.addEventListener('DOMContentLoaded', () => {
-  // panels use display none/block via class active
-});
 
 async function loadPanel(id) {
   if (id === 'shop')    await loadShop();
@@ -257,8 +248,17 @@ async function loadPanel(id) {
 
 // ── SHOP ──
 async function loadShop() {
-  if (DEMO) { ALL_PRODUCTS = demoProducts(); renderProducts(ALL_PRODUCTS); return; }
-  const { data } = await window.sb.from('products').select('*').eq('is_active', true).order('created_at', { ascending:false });
+  // PRODUCTION: Fetch real active products from database
+  const { data, error } = await window.sb.from('products')
+    .select('*')
+    .eq('is_active', true)
+    .gt('quantity', 0) // Only show items in stock
+    .order('created_at', { ascending:false });
+    
+  if (error) {
+    toast("Error loading shop: " + error.message, "error");
+    return;
+  }
   ALL_PRODUCTS = data || [];
   renderProducts(ALL_PRODUCTS);
 }
@@ -289,20 +289,7 @@ function renderProducts(products) {
     </div>`).join('');
 }
 
-function filterProducts() {
-  const q    = document.getElementById('search-q').value.toLowerCase();
-  const cat  = document.getElementById('search-cat').value;
-  const sort = document.getElementById('search-sort').value;
-  let list = ALL_PRODUCTS.filter(p =>
-    (!q || p.name.toLowerCase().includes(q) || (p.description||'').toLowerCase().includes(q)) &&
-    (!cat || p.category === cat)
-  );
-  if (sort === 'price-asc')  list = list.sort((a,b) => a.price - b.price);
-  if (sort === 'price-desc') list = list.sort((a,b) => b.price - a.price);
-  renderProducts(list);
-}
-
-// ── PRODUCT MODAL ──
+// ── PRODUCT MODAL & ORDERING ──
 function openProductModal(id) {
   SELECTED_PRODUCT = ALL_PRODUCTS.find(p => p.id === id);
   if (!SELECTED_PRODUCT) return;
@@ -313,6 +300,7 @@ function openProductModal(id) {
   document.getElementById('pm-qty').textContent   = `${p.quantity} in stock`;
   document.getElementById('pm-addr').value = USER.address || '';
   document.getElementById('pm-qty-input').value = '1';
+  
   const imgEl = document.getElementById('pm-img');
   imgEl.innerHTML = p.image_url
     ? `<img src="${p.image_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='${prodEmoji(p.category)}'" />`
@@ -325,159 +313,133 @@ async function placeOrder() {
   const qty    = parseInt(document.getElementById('pm-qty-input').value) || 1;
   const addr   = document.getElementById('pm-addr').value.trim();
   const ptype  = document.getElementById('pm-payment').value;
+
   if (!addr) { toast('Delivery address is required', 'error'); return; }
   if (qty < 1 || qty > SELECTED_PRODUCT.quantity) {
     toast(`Please enter quantity between 1 and ${SELECTED_PRODUCT.quantity}`, 'error'); return;
   }
+
   setBtn('place-order-btn', true);
   try {
-    if (DEMO) {
-      await delay(700);
-      toast(`✅ Order placed! Total: ₹${(SELECTED_PRODUCT.price * qty).toLocaleString('en-IN')}`, 'success');
-      document.getElementById('product-modal').classList.add('hidden');
-      return;
-    }
     const total = SELECTED_PRODUCT.price * qty;
+    
+    // PRODUCTION: Insert real order into Supabase
     const { data: order, error } = await window.sb.from('orders').insert({
-      buyer_id: USER.id, seller_id: SELECTED_PRODUCT.seller_id,
-      product_id: SELECTED_PRODUCT.id, quantity: qty,
-      total_amount: total, drop_address: addr,
-      pickup_address: null,
+      buyer_id: USER.id, 
+      seller_id: SELECTED_PRODUCT.seller_id,
+      product_id: SELECTED_PRODUCT.id, 
+      quantity: qty,
+      total_amount: total, 
+      drop_address: addr,
       payment_type: ptype,
       order_status: 'placed',
       payment_status: ptype === 'online' ? 'paid' : 'pending'
     }).select().single();
+
     if (error) throw error;
-    // Create payment record
+
+    // Create real payment record
     await window.sb.from('payments').insert({
-      order_id: order.id, seller_id: SELECTED_PRODUCT.seller_id,
-      buyer_id: USER.id, amount: total,
+      order_id: order.id, 
+      seller_id: SELECTED_PRODUCT.seller_id,
+      buyer_id: USER.id, 
+      amount: total,
       status: ptype === 'online' ? 'admin_wallet' : 'pending',
       payment_method: ptype
     });
-    // Update product stock
-    await window.sb.from('products').update({ quantity: SELECTED_PRODUCT.quantity - qty }).eq('id', SELECTED_PRODUCT.id);
+
+    // Update product stock in database
+    await window.sb.from('products')
+      .update({ quantity: SELECTED_PRODUCT.quantity - qty })
+      .eq('id', SELECTED_PRODUCT.id);
+
     toast(`✅ Order placed! Total: ₹${total.toLocaleString('en-IN')}`, 'success');
     document.getElementById('product-modal').classList.add('hidden');
     SELECTED_PRODUCT = null;
-  } catch(e) { toast(e.message, 'error'); }
-  finally { setBtn('place-order-btn', false, '🛒 Place Order'); }
+    loadShop(); // Refresh shop view
+  } catch(e) { 
+    toast(e.message, 'error'); 
+  } finally { 
+    setBtn('place-order-btn', false, '🛒 Place Order'); 
+  }
 }
 
 // ── ORDERS ──
 async function loadOrders() {
-  if (DEMO) { renderOrders(demoOrders()); return; }
-  const { data } = await window.sb
-    .from('orders').select('*, products(name,category)')
+  // PRODUCTION: Join products to get names
+  const { data, error } = await window.sb
+    .from('orders')
+    .select('*, products(name, category)')
     .eq('buyer_id', USER.id)
     .order('created_at', { ascending:false });
+
+  if (error) {
+    toast("Error loading orders: " + error.message, "error");
+    return;
+  }
   renderOrders(data || []);
 }
 
 function renderOrders(orders) {
   const el = document.getElementById('orders-list');
   if (!orders.length) {
-    el.innerHTML = `<div class="empty-state"><div class="es-icon">📭</div><h3>No orders yet</h3><p>Browse the shop and place your first order!</p><button class="btn btn-primary mt-2" onclick="showPanel('shop')">Browse Shop</button></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="es-icon">📭</div><h3>No orders yet</h3><p>Browse the shop and place your first order!</p></div>`;
     return;
   }
-  // Update badge
-  const active = orders.filter(o => !['delivered','returned','cancelled'].includes(o.order_status||o.status));
+
+  const active = orders.filter(o => !['delivered','returned','cancelled'].includes(o.order_status));
   const badge = document.getElementById('orders-badge');
-  if (active.length) { badge.textContent = active.length; badge.style.display = ''; }
-  el.innerHTML = orders.map(o => {
-    const status = o.order_status || o.status;
-    const pname  = o.products?.name || o.product_name || 'Product';
-    return `
+  if (active.length) { 
+    badge.textContent = active.length; 
+    badge.style.display = ''; 
+  } else {
+    badge.style.display = 'none';
+  }
+
+  el.innerHTML = orders.map(o => `
     <div class="order-card">
       <div class="order-header">
         <div>
           <div class="order-id">${shortId(o.id)}</div>
-          <div class="order-product">${pname}</div>
+          <div class="order-product">${o.products?.name || 'Product'}</div>
         </div>
-        <div>${statusBadge(status)}</div>
+        <div>${statusBadge(o.order_status)}</div>
       </div>
       <div class="order-meta">
         <div class="order-row"><span class="order-label">Amount</span><span class="order-value text-gold">${fmtCurrency(o.total_amount)}</span></div>
         <div class="order-row"><span class="order-label">Payment</span>${paymentBadge(o.payment_type)}</div>
         <div class="order-row"><span class="order-label">Deliver to</span><span class="order-value">${o.drop_address||'—'}</span></div>
-        <div class="order-row"><span class="order-label">Date</span><span class="order-value text-muted">${fmtDate(o.created_at||o.date)}</span></div>
       </div>
-      ${status === 'delivered' ? `
-      <div class="order-actions">
-        <button class="btn btn-danger btn-sm" onclick="returnOrder('${o.id}')">↩️ Request Return</button>
-      </div>` : ''}
-    </div>`;
-  }).join('');
-}
-
-async function returnOrder(id) {
-  if (!confirmAction('Request a return for this order?')) return;
-  if (DEMO) { toast('Return requested. Admin will review. ✅', 'success'); loadOrders(); return; }
-  await window.sb.from('orders').update({ order_status:'returned' }).eq('id', id);
-  await window.sb.from('payments').update({ status:'returned' }).eq('order_id', id);
-  toast('Return requested. Admin will review.', 'success');
-  loadOrders();
+    </div>`).join('');
 }
 
 // ── PROFILE ──
-function loadProfileForm() {
-  document.getElementById('p-name').value  = USER.name  || '';
-  document.getElementById('p-phone').value = USER.phone || '';
-  document.getElementById('p-email').value = USER.email || '';
-  document.getElementById('p-addr').value  = USER.address || '';
-  document.getElementById('profile-name-display').textContent = USER.name || '—';
-  // Render uploadable avatar
-  document.getElementById('profile-avatar-container').innerHTML = renderUploadableAvatar(USER, 'avatar-xl');
-}
-
-function onAvatarFileChange(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (DEMO) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      document.querySelectorAll('.user-avatar-img').forEach(el => el.src = e.target.result);
-      document.querySelectorAll('.avatar .initials').forEach(el => el.style.display = 'none');
-      toast('Avatar preview updated (Demo mode)', 'success');
-    };
-    reader.readAsDataURL(file);
-    return;
-  }
-  handleAvatarUpload(file, document.getElementById('profile-avatar-container').querySelector('.avatar'), USER.id, url => {
-    USER.avatar_url = url;
-    renderUser();
-  });
-}
-
 async function saveProfile() {
   const name  = document.getElementById('p-name').value.trim();
   const phone = document.getElementById('p-phone').value.trim();
   const addr  = document.getElementById('p-addr').value.trim();
+  
   if (!name) { toast('Name is required', 'error'); return; }
   setBtn('save-profile-btn', true);
+
   try {
-    if (DEMO) {
-      await delay(400);
-      USER = { ...USER, name, phone, address: addr };
-      renderUser();
-      document.getElementById('profile-name-display').textContent = name;
-      toast('Profile saved ✅', 'success'); return;
-    }
-    const { error } = await window.sb.from('users').update({ name, phone: phone||null, address: addr||null }).eq('id', USER.id);
+    const { error } = await window.sb.from('users')
+      .update({ name, phone, address: addr })
+      .eq('id', USER.id);
+      
     if (error) throw error;
-    USER = { ...USER, name, phone, address: addr };
+    
+    USER.name = name;
+    USER.phone = phone;
+    USER.address = addr;
     renderUser();
     document.getElementById('profile-name-display').textContent = name;
     toast('Profile saved ✅', 'success');
-  } catch(e) { toast(e.message, 'error'); }
-  finally { setBtn('save-profile-btn', false, 'Save Changes'); }
-}
-
-async function doResetPassword() {
-  if (DEMO) { toast('Demo mode — no password reset', 'info'); return; }
-  const { error } = await window.sb.auth.resetPasswordForEmail(USER.email);
-  if (error) toast(error.message, 'error');
-  else toast('Password reset email sent ✅', 'success');
+  } catch(e) { 
+    toast(e.message, 'error'); 
+  } finally { 
+    setBtn('save-profile-btn', false, 'Save Changes'); 
+  }
 }
 
 // ── HELPERS ──
@@ -488,40 +450,18 @@ function hideSplash() {
   setTimeout(() => s.style.display = 'none', 600);
 }
 
-// Override global showPanel for this page
+// Global UI override
 window.showPanel = function(id) {
   ['shop','orders','profile'].forEach(p => {
     const el = document.getElementById(`panel-${p}`);
-    if (el) { el.classList.toggle('active', p === id); }
+    if (el) el.classList.toggle('active', p === id);
   });
   setActiveNav(id);
   closeSidebar();
   loadPanel(id);
 };
 
-// ── DEMO DATA ──
-function demoUser(role) {
-  return { id:'demo-user', name:'Demo Buyer', email:'demo@petalrush.com', role, phone:'+91 9999999999', address:'Mumbai, Maharashtra', avatar_url:'', is_verified:true };
-}
-function demoProducts() {
-  return [
-    { id:'p1', seller_id:'s1', name:'Red Rose Bouquet', description:'12 fresh red roses, hand-picked at dawn for maximum fragrance and beauty.', price:699, quantity:25, category:'bouquets', image_url:'', is_active:true },
-    { id:'p2', seller_id:'s1', name:'Sunflower Delight', description:'Bright and cheerful sunflowers in a rustic wrap. Perfect for gifting.', price:449, quantity:18, category:'flowers', image_url:'', is_active:true },
-    { id:'p3', seller_id:'s2', name:'Lavender Dreams', description:'Fresh lavender bundles with a soothing fragrance. Tied with a silk ribbon.', price:349, quantity:30, category:'flowers', image_url:'', is_active:true },
-    { id:'p4', seller_id:'s2', name:'White Lily Bundle', description:'Elegant white lilies for weddings and special occasions.', price:599, quantity:12, category:'bouquets', image_url:'', is_active:true },
-    { id:'p5', seller_id:'s1', name:'Succulent Garden', description:'Curated set of 5 succulents in a ceramic planter. Low maintenance.', price:899, quantity:8, category:'plants', image_url:'', is_active:true },
-    { id:'p6', seller_id:'s2', name:'Orchid Elegance', description:'Premium Phalaenopsis orchid in a designer pot. Includes care guide.', price:1299, quantity:5, category:'plants', image_url:'', is_active:true },
-    { id:'p7', seller_id:'s1', name:'Tulip Spring Mix', description:'Colorful tulips in pink, yellow and purple — spring in a vase.', price:499, quantity:20, category:'flowers', image_url:'', is_active:true },
-    { id:'p8', seller_id:'s2', name:'Love Gift Box', description:'Premium gift set: roses, chocolates and personalised card.', price:1599, quantity:10, category:'gifts', image_url:'', is_active:true },
-  ];
-}
-function demoOrders() {
-  return [
-    { id:'ord-001', product_name:'Red Rose Bouquet', products:{name:'Red Rose Bouquet'}, total_amount:699, payment_type:'online', order_status:'delivered', drop_address:'Mumbai, Andheri West', created_at:'2024-01-15' },
-    { id:'ord-002', product_name:'Sunflower Delight', products:{name:'Sunflower Delight'}, total_amount:449, payment_type:'cod', order_status:'picked', drop_address:'Mumbai, Bandra East', created_at:'2024-01-16' },
-    { id:'ord-003', product_name:'White Lily Bundle', products:{name:'White Lily Bundle'}, total_amount:599, payment_type:'online', order_status:'placed', drop_address:'Pune, Koregaon Park', created_at:'2024-01-17' },
-  ];
-}
+
 </script>
 </body>
 </html>
