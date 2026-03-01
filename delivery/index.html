@@ -5,25 +5,27 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Petal Rush — Delivery</title>
 <link rel="stylesheet" href="../assets/css/styles.css">
+<style>
+.panel{display:none;}.panel.active{display:block;}
+.buyer-info{background:var(--bg3);border-radius:9px;padding:12px;margin:12px 0;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);transition:background 0.25s,border-color 0.25s;}
+.nav-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.action-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+</style>
 </head>
 <body>
-<div id="loading-screen">
-  <div class="loading-logo">Petal Rush</div>
-  <div class="loading-sub">Delivery Partner</div>
-  <div class="loading-bar"></div>
-</div>
-<div id="toast-container"></div>
+<div id="loading-screen"><div class="ls-logo">Petal Rush</div><div class="ls-sub">Delivery Partner</div><div class="ls-bar"></div></div>
+<div id="toast-root"></div>
 
-<div class="dashboard-wrap hidden" id="app">
-  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+<div class="dash-wrap hidden" id="app">
+  <div class="sidebar-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
 
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <h1>Petal Rush</h1>
-      <div class="sidebar-role-tag">🚚 Delivery</div>
+      <div class="sidebar-role">🚚 Delivery</div>
     </div>
-    <div class="sidebar-user" onclick="showPanel('profile')">
-      <div id="sb-avatar"></div>
+    <div class="sidebar-user" onclick="navTo('profile')">
+      <div id="sb-av"></div>
       <div class="sidebar-user-info">
         <div class="sidebar-user-name" id="sb-name">Loading…</div>
         <div class="sidebar-user-email" id="sb-email">…</div>
@@ -31,70 +33,57 @@
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section">Deliveries</div>
-      <button class="nav-item active" data-panel="active" onclick="showPanel('active')">
-        <span class="nav-icon">📦</span> Active Orders
-        <span class="nav-badge" id="active-badge" style="display:none">0</span>
-      </button>
-      <button class="nav-item" data-panel="completed" onclick="showPanel('completed')">
-        <span class="nav-icon">✅</span> Completed
-      </button>
+      <button class="nav-item active" data-panel="active" onclick="navTo('active')"><span class="nav-icon">📦</span>Active Orders<span class="nav-badge hidden" id="act-badge">0</span></button>
+      <button class="nav-item" data-panel="done" onclick="navTo('done')"><span class="nav-icon">✅</span>Completed</button>
       <div class="nav-section">Account</div>
-      <button class="nav-item" data-panel="profile" onclick="showPanel('profile')">
-        <span class="nav-icon">👤</span> My Profile
-      </button>
+      <button class="nav-item" data-panel="profile" onclick="navTo('profile')"><span class="nav-icon">👤</span>My Profile</button>
     </nav>
     <div class="sidebar-footer">
-      <button class="nav-item w-full" onclick="logout()"><span class="nav-icon">🚪</span> Sign Out</button>
+      <button class="nav-item" style="color:var(--rose-light)" onclick="logout()"><span class="nav-icon">🚪</span>Sign Out</button>
     </div>
   </nav>
 
   <div class="topbar">
-    <button class="topbar-menu" onclick="toggleSidebar()">☰</button>
-    <div class="topbar-brand">Deliveries</div>
-    <div id="topbar-avatar" onclick="showPanel('profile')" style="cursor:pointer"></div>
+    <div class="topbar-left"><button class="menu-btn" onclick="toggleSidebar()">☰</button><div class="topbar-brand">My Deliveries</div></div>
+    <div class="topbar-right">
+      <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+      <div id="top-av" onclick="navTo('profile')" style="cursor:pointer"></div>
+    </div>
   </div>
 
   <main class="main-content">
 
-    <!-- ═══ ACTIVE ORDERS ═══ -->
+    <!-- ACTIVE -->
     <div class="panel active" id="panel-active">
       <div class="page-header">
-        <div><h2>Active <em>Deliveries</em></h2><div class="page-breadcrumb">Your assigned orders</div></div>
+        <div class="page-header-left"><h2>Active <em>Deliveries</em></h2><div class="page-sub">Your assigned orders</div></div>
         <div class="page-actions">
-          <button class="btn btn-secondary" id="refresh-btn" onclick="refreshDeliveries()">🔄 Refresh</button>
+          <button class="btn btn-secondary" id="refresh-btn" onclick="loadActive()">🔄 Refresh</button>
         </div>
       </div>
-      <div id="active-list">
-        <div class="empty-state"><div class="es-icon">⏳</div><h3>Loading…</h3></div>
-      </div>
+      <div id="active-list"><div class="empty-state"><div class="empty-icon">⏳</div><h3>Loading…</h3></div></div>
     </div>
 
-    <!-- ═══ COMPLETED ═══ -->
-    <div class="panel" id="panel-completed">
-      <div class="page-header">
-        <div><h2><em>Completed</em> Deliveries</h2></div>
+    <!-- DONE -->
+    <div class="panel" id="panel-done">
+      <div class="page-header"><div class="page-header-left"><h2><em>Completed</em> Deliveries</h2></div></div>
+      <div class="stats-grid mb-2">
+        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="st-del">0</div><div class="stat-label">Delivered</div></div>
+        <div class="stat-card"><div class="stat-icon">↩️</div><div class="stat-value" id="st-ret">0</div><div class="stat-label">Returned</div></div>
       </div>
-      <div class="stats-grid mb-3">
-        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="stat-delivered">0</div><div class="stat-label">Delivered</div></div>
-        <div class="stat-card"><div class="stat-icon">↩️</div><div class="stat-value" id="stat-returned">0</div><div class="stat-label">Returned</div></div>
-      </div>
-      <div id="completed-list">
-        <div class="empty-state"><div class="es-icon">⏳</div><h3>Loading…</h3></div>
-      </div>
+      <div id="done-list"><div class="empty-state"><div class="empty-icon">⏳</div></div></div>
     </div>
 
-    <!-- ═══ PROFILE ═══ -->
+    <!-- PROFILE -->
     <div class="panel" id="panel-profile">
-      <div class="page-header"><div><h2>My <em>Profile</em></h2></div></div>
+      <div class="page-header"><div class="page-header-left"><h2>My <em>Profile</em></h2></div></div>
       <div class="profile-wrap">
         <div class="profile-card mb-2">
-          <div class="profile-cover">
-            <div class="profile-avatar-wrap" id="profile-avatar-container"></div>
-          </div>
+          <div class="profile-cover"><div class="profile-cover-av" id="prof-av-wrap"></div></div>
           <div class="profile-info">
-            <div class="profile-name" id="profile-name-display">—</div>
-            <div class="profile-role">🚚 Delivery Partner</div>
-            <p class="text-muted mt-1" style="font-size:12px">Click your photo to upload a new avatar</p>
+            <div class="profile-name" id="prof-name">—</div>
+            <div class="profile-role-badge">🚚 Delivery Partner</div>
+            <p class="profile-hint">Tap your photo to upload a new avatar</p>
           </div>
         </div>
         <div class="card mb-2">
@@ -108,16 +97,15 @@
             <div class="form-group">
               <label>Home Address</label>
               <div class="flex gap-1">
-                <input type="text" id="p-addr" placeholder="Your address" style="flex:1" />
-                <button class="btn btn-secondary btn-sm" id="p-gps-btn" onclick="detectGPS('p-addr','p-gps-btn')">📍 GPS</button>
+                <input type="text" id="p-addr" style="flex:1" />
+                <button class="btn btn-secondary btn-sm" id="p-gps" onclick="detectGPS('p-addr','p-gps')" style="flex-shrink:0">📍</button>
               </div>
             </div>
-            <button class="btn btn-primary" id="save-profile-btn" onclick="saveProfile()">Save Changes</button>
+            <button class="btn btn-primary" id="save-btn" onclick="saveProfile()">Save Changes</button>
           </div>
         </div>
-        <div class="card">
-          <div class="card-header"><h3>Security</h3></div>
-          <button class="btn btn-secondary btn-full" onclick="doResetPassword()">🔑 Change Password</button>
+        <div class="card"><div class="card-header"><h3>Security</h3></div>
+          <button class="btn btn-secondary btn-full" onclick="resetPass()">🔑 Change Password</button>
         </div>
       </div>
     </div>
@@ -130,269 +118,172 @@
 <script src="../assets/js/utils.js"></script>
 <script>
 let USER = null;
-const DEMO = sessionStorage.getItem('pr_demo') === '1';
 
 window.addEventListener('load', async () => {
-  await delay(1600); hideSplash();
-  if (DEMO) { USER = demoUser(); init(); return; }
+  applyTheme(localStorage.getItem(PR_THEME_KEY)||'dark');
+  await sleep(1500); hideSplash();
   USER = await requireRole('delivery');
   if (!USER) return;
-  init();
+  document.getElementById('sb-name').textContent  = USER.name;
+  document.getElementById('sb-email').textContent = USER.email;
+  document.getElementById('sb-av').innerHTML  = renderAvatar(USER,'av-md');
+  document.getElementById('top-av').innerHTML = renderAvatar(USER,'av-sm');
+  document.getElementById('app').classList.remove('hidden');
+  navTo('active');
 });
 
-function init() {
-  document.getElementById('sb-name').textContent   = USER.name || 'Partner';
-  document.getElementById('sb-email').textContent  = USER.email || '';
-  document.getElementById('sb-avatar').innerHTML   = renderAvatar(USER,'avatar-md');
-  document.getElementById('topbar-avatar').innerHTML = renderAvatar(USER,'avatar-sm');
-  document.getElementById('app').classList.remove('hidden');
-  window.showPanel('active');
-}
-
-window.showPanel = function(id) {
-  ['active','completed','profile'].forEach(p => {
-    document.getElementById(`panel-${p}`)?.classList.toggle('active', p === id);
+window.showPanel = navTo;
+function navTo(id) {
+  ['active','done','profile'].forEach(p=>{
+    const el=document.getElementById(`panel-${p}`);
+    if(el) el.style.display = p===id?'':'none';
   });
   setActiveNav(id);
   closeSidebar();
-  loadPanel(id);
-};
-
-async function loadPanel(id) {
-  if (id === 'active')    await loadActive();
-  if (id === 'completed') await loadCompleted();
-  if (id === 'profile')   loadProfileForm();
+  if(id==='active')  loadActive();
+  if(id==='done')    loadDone();
+  if(id==='profile') loadProfile();
 }
 
-// ── ACTIVE DELIVERIES ──
+/* ── ACTIVE DELIVERIES ── */
 async function loadActive() {
-  let orders;
-  if (DEMO) { orders = demoActiveOrders(); }
-  else {
-    const { data } = await window.sb
-      .from('orders')
-      .select('*, products(name,category,price), users!buyer_id(name,phone)')
-      .eq('delivery_partner_id', USER.id)
-      .in('order_status', ['assigned','picked'])
-      .order('created_at', { ascending:false });
-    orders = data || [];
-  }
-  // Update badge
-  const badge = document.getElementById('active-badge');
-  if (orders.length) { badge.textContent = orders.length; badge.style.display = ''; }
-  else badge.style.display = 'none';
-
+  btnLoad('refresh-btn', true, '🔄 Loading…');
   const el = document.getElementById('active-list');
+  const { data, error } = await window.sb
+    .from('orders')
+    .select('*, products(name,category,price), users!buyer_id(name,phone)')
+    .eq('delivery_partner_id', USER.id)
+    .in('order_status', ['assigned','picked'])
+    .order('updated_at',{ascending:false});
+  btnLoad('refresh-btn', false);
+  const orders = data||[];
+  const badge = document.getElementById('act-badge');
+  if (orders.length) { badge.textContent=orders.length; badge.classList.remove('hidden'); }
+  else badge.classList.add('hidden');
+  if (error) { el.innerHTML=`<div class="alert alert-error">${error.message}</div>`; return; }
   if (!orders.length) {
-    el.innerHTML = `<div class="empty-state"><div class="es-icon">📭</div><h3>No active deliveries</h3><p>New assignments will appear here. Tap Refresh to check.</p></div>`;
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><h3>No active deliveries</h3><p>New assignments will appear here. Use Refresh to check.</p></div>`;
     return;
   }
-  el.innerHTML = orders.map(o => renderDeliveryCard(o, false)).join('');
+  el.innerHTML = orders.map(o => renderCard(o, false)).join('');
 }
 
-async function loadCompleted() {
-  let orders;
-  if (DEMO) { orders = demoCompletedOrders(); }
-  else {
-    const { data } = await window.sb
-      .from('orders')
-      .select('*, products(name,category), users!buyer_id(name)')
-      .eq('delivery_partner_id', USER.id)
-      .in('order_status', ['delivered','returned'])
-      .order('updated_at', { ascending:false });
-    orders = data || [];
-  }
-  const delivered = orders.filter(o => (o.order_status||o.status) === 'delivered').length;
-  const returned  = orders.filter(o => (o.order_status||o.status) === 'returned').length;
-  document.getElementById('stat-delivered').textContent = delivered;
-  document.getElementById('stat-returned').textContent  = returned;
-
-  const el = document.getElementById('completed-list');
-  if (!orders.length) {
-    el.innerHTML = `<div class="empty-state"><div class="es-icon">✅</div><h3>No completed deliveries yet</h3></div>`;
-    return;
-  }
-  el.innerHTML = orders.map(o => renderDeliveryCard(o, true)).join('');
+/* ── COMPLETED ── */
+async function loadDone() {
+  const { data, error } = await window.sb
+    .from('orders')
+    .select('*, products(name,category)')
+    .eq('delivery_partner_id', USER.id)
+    .in('order_status', ['delivered','returned'])
+    .order('updated_at',{ascending:false});
+  const orders = data||[];
+  document.getElementById('st-del').textContent = orders.filter(o=>o.order_status==='delivered').length;
+  document.getElementById('st-ret').textContent = orders.filter(o=>o.order_status==='returned').length;
+  const el = document.getElementById('done-list');
+  if (!orders.length) { el.innerHTML=`<div class="empty-state"><div class="empty-icon">✅</div><h3>No completed deliveries yet</h3></div>`; return; }
+  el.innerHTML = orders.map(o => renderCard(o, true)).join('');
 }
 
-async function refreshDeliveries() {
-  setBtn('refresh-btn', true, '🔄 Refreshing…');
-  await loadActive();
-  toast('Updated ✅', 'success');
-  setBtn('refresh-btn', false, '🔄 Refresh');
-}
-
-function renderDeliveryCard(o, isCompleted) {
-  const status  = o.order_status || o.status;
-  const product = o.product_name || o.products?.name || 'Product';
-  const pickup  = o.pickup_address || o.pickup || 'Seller location (contact seller)';
-  const drop    = o.drop_address   || o.drop   || 'Buyer address';
-  const buyer   = o.buyer_name || o.users?.name || '—';
-  const phone   = o.buyer_phone || o.users?.phone || '';
-
-  const actions = !isCompleted ? `
-    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
-      ${status === 'assigned' ? `<button class="btn btn-secondary btn-sm" onclick="updateStatus('${o.id}','picked')">📦 Mark as Picked Up</button>` : ''}
-      ${status === 'picked'   ? `<button class="btn btn-success btn-sm" onclick="updateStatus('${o.id}','delivered')">✅ Mark as Delivered</button>` : ''}
-      <button class="btn btn-danger btn-sm" onclick="updateStatus('${o.id}','returned')">↩️ Return Order</button>
-    </div>` : '';
+function renderCard(o, done) {
+  const status  = o.order_status;
+  const product = o.products?.name || 'Product';
+  const pickup  = o.pickup_address || 'Contact seller for pickup location';
+  const drop    = o.drop_address   || 'Buyer address on file';
+  const bname   = o.users?.name    || '—';
+  const bphone  = o.users?.phone   || '';
 
   return `
-    <div class="delivery-card" style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="font-size:11px;color:var(--text-dim);font-family:monospace">${shortId(o.id)}</div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:20px;margin-top:4px;color:var(--cream)">${product}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
-          ${statusBadge(status)}
-          ${paymentBadge(o.payment_type)}
-          ${o.payment_type === 'cod' ? `<span class="badge badge-gold" style="font-size:10px">💵 Collect ${fmtCurrency(o.total_amount)}</span>` : ''}
-        </div>
+  <div class="delivery-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+      <div>
+        <div class="order-id">${shortId(o.id)}</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;margin-top:3px;color:var(--cream)">${product}</div>
       </div>
-
-      <!-- Buyer Info -->
-      <div style="background:var(--bg3);border-radius:8px;padding:12px;margin-top:12px;display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim)">Customer</div>
-          <div style="font-size:14px;margin-top:2px">${buyer}</div>
-        </div>
-        ${phone ? `<a href="tel:${phone}" class="btn btn-secondary btn-sm">📞 Call</a>` : ''}
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+        ${statusBadge(status)}
+        ${payBadge(o.payment_type)}
+        ${o.payment_type==='cod'?`<span class="badge badge-gold">💵 Collect ${fmtCur(o.total_amount)}</span>`:''}
       </div>
+    </div>
 
-      <!-- Route -->
-      <div class="delivery-route">
-        <div class="route-point">
-          <div class="route-dot pickup"></div>
-          <div>
-            <div class="route-label">Pickup</div>
-            <div class="route-address">${pickup}</div>
-          </div>
-        </div>
-        <div class="route-point">
-          <div class="route-dot drop"></div>
-          <div>
-            <div class="route-label">Drop-off</div>
-            <div class="route-address">${drop}</div>
-          </div>
-        </div>
+    <div class="buyer-info">
+      <div>
+        <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:0.1em">Customer</div>
+        <div style="font-size:14px;margin-top:2px">${bname}</div>
       </div>
+      ${bphone?`<a href="tel:${bphone}" class="btn btn-secondary btn-sm">📞 Call</a>`:''}
+    </div>
 
-      <!-- Navigation Buttons -->
-      ${!isCompleted ? `
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <a class="gps-btn" href="${mapsNavLink(pickup)}" target="_blank" rel="noopener">
-          📍 Navigate to Pickup
-        </a>
-        <a class="gps-btn gps-btn-pickup" href="${mapsNavLink(drop)}" target="_blank" rel="noopener">
-          🗺️ Navigate to Drop
-        </a>
-      </div>` : ''}
+    <div class="route-wrap">
+      <div style="position:relative;padding-left:20px">
+        <div class="route-dot pickup" style="top:8px;left:0;position:absolute"></div>
+        <div class="route-label">Pickup Location</div>
+        <div class="route-addr">${pickup}</div>
+      </div>
+      <div style="width:1px;height:16px;background:var(--border);margin-left:3px"></div>
+      <div style="position:relative;padding-left:20px">
+        <div class="route-dot drop" style="top:8px;left:0;position:absolute"></div>
+        <div class="route-label">Drop-off Location</div>
+        <div class="route-addr">${drop}</div>
+      </div>
+    </div>
 
-      ${actions}
-    </div>`;
+    ${!done?`
+    <div class="nav-btns">
+      <a class="gps-btn gps-pickup" href="${mapsLink(pickup)}" target="_blank" rel="noopener noreferrer">📍 Navigate to Pickup</a>
+      <a class="gps-btn gps-drop"   href="${mapsLink(drop)}"   target="_blank" rel="noopener noreferrer">🗺️ Navigate to Drop</a>
+    </div>
+    <div class="action-btns">
+      ${status==='assigned' ? `<button class="btn btn-secondary btn-sm" onclick="updateStatus('${o.id}','picked')">📦 Mark Picked Up</button>` : ''}
+      ${status==='picked'   ? `<button class="btn btn-success btn-sm" onclick="updateStatus('${o.id}','delivered')">✅ Mark Delivered</button>` : ''}
+      <button class="btn btn-danger btn-sm" onclick="updateStatus('${o.id}','returned')">↩️ Return Order</button>
+    </div>`:''}
+  </div>`;
 }
 
-async function updateStatus(orderId, newStatus) {
-  const messages = {
-    picked:    'Mark this order as picked up?',
-    delivered: 'Mark this order as delivered?',
-    returned:  'Mark this order as returned? This will hold the payment.'
-  };
-  if (!confirmAction(messages[newStatus] || 'Update status?')) return;
-
-  if (DEMO) {
-    toast(`Status updated: ${newStatus} ✅`, 'success');
-    loadActive(); return;
+async function updateStatus(id, ns) {
+  const msgs = { picked:'Mark this order as picked up from seller?', delivered:'Mark as delivered to customer?', returned:'Mark as returned? Payment will be held by admin.' };
+  if (!confirmAction(msgs[ns])) return;
+  const { error } = await window.sb.from('orders').update({ order_status:ns }).eq('id',id).eq('delivery_partner_id',USER.id);
+  if (error) { toast(error.message,'error'); return; }
+  if (ns==='returned') {
+    await window.sb.from('payments').update({status:'returned'}).eq('order_id',id);
   }
-  const { error } = await window.sb.from('orders').update({ order_status: newStatus }).eq('id', orderId).eq('delivery_partner_id', USER.id);
-  if (error) { toast(error.message, 'error'); return; }
-  if (newStatus === 'returned') {
-    await window.sb.from('payments').update({ status:'returned' }).eq('order_id', orderId);
-  }
-  toast(`Order marked as ${newStatus} ✅`, 'success');
+  toast(`Marked as ${ns} ✅`,'success');
   loadActive();
 }
 
-// ── PROFILE ──
-function loadProfileForm() {
-  document.getElementById('p-name').value  = USER.name  || '';
-  document.getElementById('p-phone').value = USER.phone || '';
-  document.getElementById('p-email').value = USER.email || '';
-  document.getElementById('p-addr').value  = USER.address || '';
-  document.getElementById('profile-name-display').textContent = USER.name || '—';
-  document.getElementById('profile-avatar-container').innerHTML = renderUploadableAvatar(USER, 'avatar-xl');
+/* ── PROFILE ── */
+function loadProfile() {
+  document.getElementById('p-name').value  = USER.name||'';
+  document.getElementById('p-phone').value = USER.phone||'';
+  document.getElementById('p-email').value = USER.email||'';
+  document.getElementById('p-addr').value  = USER.address||'';
+  document.getElementById('prof-name').textContent = USER.name||'—';
+  document.getElementById('prof-av-wrap').innerHTML = renderUploadableAvatar(USER,'av-xl');
 }
-
-function onAvatarFileChange(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (DEMO) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      document.querySelectorAll('.user-avatar-img').forEach(el => el.src = e.target.result);
-      toast('Avatar updated (Demo)', 'success');
-    };
-    reader.readAsDataURL(file);
-    return;
-  }
-  handleAvatarUpload(file, document.getElementById('profile-avatar-container').querySelector('.avatar'), USER.id, url => {
-    USER.avatar_url = url;
-    document.getElementById('sb-avatar').innerHTML = renderAvatar(USER,'avatar-md');
-    document.getElementById('topbar-avatar').innerHTML = renderAvatar(USER,'avatar-sm');
+function onAvatarChange(e) {
+  const file=e.target.files[0]; if(!file)return;
+  handleAvatarUpload(file, document.getElementById('prof-av-wrap').querySelector('.avatar'), USER.id, url=>{
+    USER.avatar_url=url;
+    document.getElementById('sb-av').innerHTML  = renderAvatar(USER,'av-md');
+    document.getElementById('top-av').innerHTML = renderAvatar(USER,'av-sm');
   });
 }
-
 async function saveProfile() {
-  const name  = document.getElementById('p-name').value.trim();
-  const phone = document.getElementById('p-phone').value.trim();
-  const addr  = document.getElementById('p-addr').value.trim();
-  if (!name) { toast('Name is required', 'error'); return; }
-  setBtn('save-profile-btn', true);
-  try {
-    if (DEMO) {
-      USER = { ...USER, name, phone, address:addr };
-      document.getElementById('sb-name').textContent = name;
-      document.getElementById('profile-name-display').textContent = name;
-      toast('Saved ✅', 'success'); return;
-    }
-    const { error } = await window.sb.from('users').update({ name, phone:phone||null, address:addr||null }).eq('id', USER.id);
-    if (error) throw error;
-    USER = { ...USER, name, phone, address:addr };
-    document.getElementById('sb-name').textContent = name;
-    document.getElementById('profile-name-display').textContent = name;
-    toast('Profile saved ✅', 'success');
-  } catch(e) { toast(e.message, 'error'); }
-  finally { setBtn('save-profile-btn', false, 'Save Changes'); }
+  const name=document.getElementById('p-name').value.trim();
+  const phone=document.getElementById('p-phone').value.trim();
+  const addr=document.getElementById('p-addr').value.trim();
+  if(!name){toast('Name is required','error');return;}
+  btnLoad('save-btn',true,'⏳ Saving…');
+  const{error}=await window.sb.from('users').update({name,phone:phone||null,address:addr||null}).eq('id',USER.id);
+  if(error)toast(error.message,'error');
+  else{USER={...USER,name,phone,address:addr};document.getElementById('sb-name').textContent=name;document.getElementById('prof-name').textContent=name;toast('Saved ✅','success');}
+  btnLoad('save-btn',false);
 }
-
-async function doResetPassword() {
-  if (DEMO) { toast('Demo mode', 'info'); return; }
-  await window.sb.auth.resetPasswordForEmail(USER.email);
-  toast('Password reset sent ✅', 'success');
-}
-
-// ── HELPERS ──
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-function hideSplash() {
-  const s = document.getElementById('loading-screen');
-  s.style.opacity = '0'; setTimeout(() => s.style.display = 'none', 600);
-}
-function demoUser() {
-  return { id:'demo-delivery', name:'Arjun Kumar', email:'delivery@demo.com', role:'delivery', phone:'+91 9123456789', address:'Mumbai, Kurla', avatar_url:'', is_verified:true };
-}
-function demoActiveOrders() {
-  return [
-    { id:'ord-001', product_name:'Red Rose Bouquet', products:{name:'Red Rose Bouquet',category:'bouquets'}, users:{name:'Priya Sharma',phone:'+91 9000000001'}, total_amount:699, payment_type:'online', order_status:'assigned', pickup_address:'Dadar Market, Mumbai', drop_address:'Andheri West, Mumbai 400053' },
-    { id:'ord-002', product_name:'Sunflower Delight', products:{name:'Sunflower Delight',category:'flowers'}, users:{name:'Rahul Mehta',phone:'+91 9000000002'}, total_amount:449, payment_type:'cod', order_status:'picked', pickup_address:'Bandra, Mumbai', drop_address:'Khar West, Mumbai 400052' },
-  ];
-}
-function demoCompletedOrders() {
-  return [
-    { id:'ord-003', product_name:'White Lily Bundle', products:{name:'White Lily Bundle',category:'bouquets'}, users:{name:'Aarav Singh'}, total_amount:599, payment_type:'online', order_status:'delivered', drop_address:'Powai, Mumbai' },
-    { id:'ord-004', product_name:'Lavender Dreams', products:{name:'Lavender Dreams',category:'flowers'}, users:{name:'Neha Gupta'}, total_amount:349, payment_type:'cod', order_status:'returned', drop_address:'Goregaon East, Mumbai' },
-  ];
-}
+async function resetPass(){const{error}=await window.sb.auth.resetPasswordForEmail(USER.email);if(error)toast(error.message,'error');else toast('Reset email sent ✅','success');}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function hideSplash(){const s=document.getElementById('loading-screen');s.style.opacity='0';setTimeout(()=>s.style.display='none',500);}
 </script>
 </body>
 </html>
