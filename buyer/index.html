@@ -5,27 +5,39 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Petal Rush — Buyer</title>
 <link rel="stylesheet" href="../assets/css/styles.css">
+<style>
+.panel { display:none; }
+.panel.active { display:block; }
+
+/* Product detail in modal */
+.pm-img { height:180px; background:var(--bg3); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:60px; margin-bottom:14px; overflow:hidden; }
+.pm-img img { width:100%; height:100%; object-fit:cover; }
+
+/* Order status timeline */
+.status-steps { display:flex; align-items:center; gap:0; margin:12px 0; flex-wrap:wrap; }
+.status-step { display:flex; align-items:center; gap:4px; font-size:11px; flex-shrink:0; }
+.status-step .dot { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+.status-step .dot.done   { background:var(--gold-dim); border:1.5px solid var(--gold); }
+.status-step .dot.active { background:var(--gold); color:#000; }
+.status-step .dot.pending{ background:var(--surface2); border:1.5px solid var(--border); color:var(--text-muted); }
+.status-step .line { width:24px; height:1.5px; background:var(--border); }
+.status-step .line.done { background:var(--gold); }
+</style>
 </head>
 <body>
-<div id="loading-screen">
-  <div class="loading-logo">Petal Rush</div>
-  <div class="loading-sub">Buyer Dashboard</div>
-  <div class="loading-bar"></div>
-</div>
-<div id="toast-container"></div>
+<div id="loading-screen"><div class="ls-logo">Petal Rush</div><div class="ls-sub">Buyer Dashboard</div><div class="ls-bar"></div></div>
+<div id="toast-root"></div>
 
-<div class="dashboard-wrap hidden" id="app">
-  <!-- Sidebar Overlay -->
-  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+<div class="dash-wrap hidden" id="app">
+  <div class="sidebar-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
 
-  <!-- Sidebar -->
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <h1>Petal Rush</h1>
-      <div class="sidebar-role-tag">🛍️ Buyer</div>
+      <div class="sidebar-role">🛍️ Buyer</div>
     </div>
-    <div class="sidebar-user" onclick="showPanel('profile')">
-      <div id="sb-avatar"></div>
+    <div class="sidebar-user" id="sb-user" onclick="navTo('profile')">
+      <div id="sb-av"></div>
       <div class="sidebar-user-info">
         <div class="sidebar-user-name" id="sb-name">Loading…</div>
         <div class="sidebar-user-email" id="sb-email">…</div>
@@ -33,92 +45,74 @@
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section">Shopping</div>
-      <button class="nav-item active" data-panel="shop" onclick="showPanel('shop')">
-        <span class="nav-icon">🌸</span> Browse Shop
-      </button>
-      <button class="nav-item" data-panel="orders" onclick="showPanel('orders')">
-        <span class="nav-icon">📦</span> My Orders
-        <span class="nav-badge" id="orders-badge" style="display:none"></span>
-      </button>
+      <button class="nav-item active" data-panel="shop" onclick="navTo('shop')"><span class="nav-icon">🌸</span>Browse Shop</button>
+      <button class="nav-item" data-panel="orders" onclick="navTo('orders')"><span class="nav-icon">📦</span>My Orders<span class="nav-badge hidden" id="ord-badge">0</span></button>
       <div class="nav-section">Account</div>
-      <button class="nav-item" data-panel="profile" onclick="showPanel('profile')">
-        <span class="nav-icon">👤</span> My Profile
-      </button>
+      <button class="nav-item" data-panel="profile" onclick="navTo('profile')"><span class="nav-icon">👤</span>My Profile</button>
     </nav>
     <div class="sidebar-footer">
-      <button class="nav-item w-full" onclick="logout()">
-        <span class="nav-icon">🚪</span> Sign Out
-      </button>
+      <button class="nav-item" style="color:var(--rose-light)" onclick="logout()"><span class="nav-icon">🚪</span>Sign Out</button>
     </div>
   </nav>
 
-  <!-- Topbar (mobile) -->
   <div class="topbar">
-    <button class="topbar-menu" onclick="toggleSidebar()">☰</button>
-    <div class="topbar-brand">Petal Rush</div>
-    <div id="topbar-avatar" onclick="showPanel('profile')" style="cursor:pointer"></div>
+    <div class="topbar-left">
+      <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-brand">Petal Rush</div>
+    </div>
+    <div class="topbar-right">
+      <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+      <div id="top-av" onclick="navTo('profile')" style="cursor:pointer"></div>
+    </div>
   </div>
 
   <main class="main-content">
-    <!-- ═══ SHOP PANEL ═══ -->
+
+    <!-- ── SHOP ── -->
     <div class="panel active" id="panel-shop">
       <div class="page-header">
-        <div>
-          <h2>Browse <em>Flowers</em></h2>
-          <div class="page-breadcrumb">Fresh blooms, delivered to your door</div>
-        </div>
+        <div class="page-header-left"><h2>Browse <em>Shop</em></h2><div class="page-sub">Fresh blooms, delivered to you</div></div>
       </div>
       <div class="search-bar">
-        <div class="search-wrap">
-          <span class="s-icon">🔍</span>
-          <input type="text" id="search-q" placeholder="Search roses, orchids, bouquets…" oninput="filterProducts()" />
-        </div>
-        <select id="search-cat" onchange="filterProducts()" style="width:150px">
+        <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="q" placeholder="Search roses, orchids, bouquets…" oninput="filterProds()" /></div>
+        <select id="cat-filter" onchange="filterProds()" style="width:140px">
           <option value="">All Categories</option>
           <option value="flowers">🌸 Flowers</option>
           <option value="bouquets">💐 Bouquets</option>
           <option value="plants">🪴 Plants</option>
-          <option value="gifts">🎁 Gift Sets</option>
+          <option value="gifts">🎁 Gifts</option>
         </select>
-        <select id="search-sort" onchange="filterProducts()" style="width:140px">
-          <option value="newest">Newest</option>
-          <option value="price-asc">Price: Low→High</option>
-          <option value="price-desc">Price: High→Low</option>
+        <select id="sort" onchange="filterProds()" style="width:140px">
+          <option value="">Sort: Newest</option>
+          <option value="asc">Price: Low → High</option>
+          <option value="desc">Price: High → Low</option>
         </select>
       </div>
       <div class="products-grid" id="shop-grid">
-        <div class="empty-state" style="grid-column:1/-1">
-          <div class="es-icon">⏳</div><h3>Loading products…</h3>
-        </div>
+        <div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">⏳</div><h3>Loading products…</h3></div>
       </div>
     </div>
 
-    <!-- ═══ ORDERS PANEL ═══ -->
+    <!-- ── ORDERS ── -->
     <div class="panel" id="panel-orders">
       <div class="page-header">
-        <div><h2>My <em>Orders</em></h2></div>
+        <div class="page-header-left"><h2>My <em>Orders</em></h2></div>
       </div>
-      <div id="orders-list">
-        <div class="empty-state"><div class="es-icon">⏳</div><h3>Loading…</h3></div>
-      </div>
+      <div id="orders-list"><div class="empty-state"><div class="empty-icon">⏳</div><h3>Loading…</h3></div></div>
     </div>
 
-    <!-- ═══ PROFILE PANEL ═══ -->
+    <!-- ── PROFILE ── -->
     <div class="panel" id="panel-profile">
-      <div class="page-header">
-        <div><h2>My <em>Profile</em></h2></div>
-      </div>
+      <div class="page-header"><div class="page-header-left"><h2>My <em>Profile</em></h2></div></div>
       <div class="profile-wrap">
         <div class="profile-card mb-2">
           <div class="profile-cover">
-            <div class="profile-avatar-wrap" id="profile-avatar-container">
-              <!-- Rendered by JS -->
-            </div>
+            <div class="profile-cover-av" id="prof-av-wrap"></div>
           </div>
           <div class="profile-info">
-            <div class="profile-name" id="profile-name-display">—</div>
-            <div class="profile-role">🛍️ Buyer</div>
-            <p class="text-muted text-sm mt-1" style="font-size:12px">Click your photo above to upload a new avatar</p>
+            <div class="profile-name" id="prof-name">—</div>
+            <div class="profile-role-badge">🛍️ Buyer</div>
+            <p class="profile-hint">Tap your photo to upload a new avatar</p>
           </div>
         </div>
         <div class="card mb-2">
@@ -132,62 +126,59 @@
             <div class="form-group">
               <label>Default Delivery Address</label>
               <div class="flex gap-1">
-                <input type="text" id="p-addr" placeholder="Your delivery address" style="flex:1" />
-                <button class="btn btn-secondary btn-sm" id="p-gps-btn" onclick="detectGPS('p-addr','p-gps-btn')">📍 GPS</button>
+                <input type="text" id="p-addr" placeholder="Enter your address" style="flex:1" />
+                <button class="btn btn-secondary btn-sm" id="p-gps" onclick="detectGPS('p-addr','p-gps')" style="flex-shrink:0">📍 GPS</button>
               </div>
             </div>
-            <button class="btn btn-primary" id="save-profile-btn" onclick="saveProfile()">Save Changes</button>
+            <button class="btn btn-primary" id="save-btn" onclick="saveProfile()">Save Changes</button>
           </div>
         </div>
         <div class="card">
           <div class="card-header"><h3>Security</h3></div>
-          <button class="btn btn-secondary btn-full" onclick="doResetPassword()">🔑 Change Password</button>
+          <button class="btn btn-secondary btn-full" onclick="resetPass()">🔑 Change Password</button>
         </div>
       </div>
     </div>
+
   </main>
 </div>
 
-<!-- ═══ PRODUCT DETAIL MODAL ═══ -->
-<div class="modal-overlay hidden" id="product-modal">
+<!-- Product Modal -->
+<div class="modal-overlay hidden" id="prod-modal">
   <div class="modal">
     <div class="modal-header">
       <h3 id="pm-name">Product</h3>
-      <button class="modal-close" onclick="document.getElementById('product-modal').classList.add('hidden')">✕</button>
+      <button class="modal-close" onclick="closeModal('prod-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <div id="pm-img" style="height:200px;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:64px;margin-bottom:16px;overflow:hidden"></div>
-      <p id="pm-desc" class="text-muted mb-2" style="font-size:13px;line-height:1.6"></p>
+      <div class="pm-img" id="pm-img"></div>
+      <p id="pm-desc" class="text-muted text-sm mb-2" style="line-height:1.6"></p>
       <div class="flex justify-between items-center mb-2">
-        <div style="font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--gold)" id="pm-price"></div>
-        <div class="text-muted text-xs" id="pm-qty"></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--gold)" id="pm-price"></div>
+        <div class="text-muted text-xs" id="pm-stock"></div>
       </div>
       <div class="flex flex-col gap-2">
         <div class="form-row">
-          <div class="form-group">
-            <label>Quantity</label>
-            <input type="number" id="pm-qty-input" value="1" min="1" max="99" />
-          </div>
-          <div class="form-group">
-            <label>Payment</label>
-            <select id="pm-payment">
+          <div class="form-group"><label>Quantity</label><input type="number" id="pm-qty" value="1" min="1" /></div>
+          <div class="form-group"><label>Payment</label>
+            <select id="pm-pay">
               <option value="online">💳 Online</option>
               <option value="cod">💵 Cash on Delivery</option>
             </select>
           </div>
         </div>
         <div class="form-group">
-          <label>Delivery Address</label>
+          <label>Delivery Address *</label>
           <div class="flex gap-1">
             <input type="text" id="pm-addr" placeholder="Enter delivery address" style="flex:1" />
-            <button class="btn btn-secondary btn-sm" id="pm-gps" onclick="detectGPS('pm-addr','pm-gps')">📍</button>
+            <button class="btn btn-secondary btn-sm" id="pm-gps" onclick="detectGPS('pm-addr','pm-gps')" style="flex-shrink:0">📍</button>
           </div>
         </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="document.getElementById('product-modal').classList.add('hidden')">Cancel</button>
-      <button class="btn btn-primary" id="place-order-btn" onclick="placeOrder()">🛒 Place Order</button>
+      <button class="btn btn-secondary" onclick="closeModal('prod-modal')">Cancel</button>
+      <button class="btn btn-primary" id="order-btn" onclick="placeOrder()">🛒 Place Order</button>
     </div>
   </div>
 </div>
@@ -196,272 +187,239 @@
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/utils.js"></script>
 <script>
-// ── STATE ──
-let USER = null;
-let ALL_PRODUCTS = [];
-let SELECTED_PRODUCT = null;
+let USER = null, ALL_PRODS = [], SEL_PROD = null;
 
-// Permanently disabled demo for production
-const DEMO = false; 
-
-// ── INIT ──
 window.addEventListener('load', async () => {
-  await delay(1600);
-  hideSplash();
-  await initDashboard();
-});
-
-async function initDashboard() {
-  // PRODUCTION: Always verify real Supabase Auth
-  USER = await requireRole('buyer'); 
+  applyTheme(localStorage.getItem(PR_THEME_KEY)||'dark');
+  await sleep(1500); hideSplash();
+  USER = await requireRole('buyer');
   if (!USER) return;
-  
   renderUser();
   document.getElementById('app').classList.remove('hidden');
-  showPanel('shop');
-}
+  navTo('shop');
+});
 
 function renderUser() {
-  document.getElementById('sb-name').textContent  = USER.name || 'Buyer';
-  document.getElementById('sb-email').textContent = USER.email || '';
-  document.getElementById('sb-avatar').innerHTML  = renderAvatar(USER, 'avatar-md');
-  document.getElementById('topbar-avatar').innerHTML = renderAvatar(USER, 'avatar-sm');
+  document.getElementById('sb-name').textContent  = USER.name;
+  document.getElementById('sb-email').textContent = USER.email;
+  document.getElementById('sb-av').innerHTML  = renderAvatar(USER,'av-md');
+  document.getElementById('top-av').innerHTML = renderAvatar(USER,'av-sm');
 }
 
-// ── PANEL SHOW ──
-const PANELS = ['shop','orders','profile'];
-function showPanel(id) {
-  PANELS.forEach(p => {
-    document.getElementById(`panel-${p}`)?.classList.toggle('active', p === id);
-    document.getElementById(`panel-${p}`)?.classList.toggle('hidden', p !== id);
+function navTo(id) {
+  ['shop','orders','profile'].forEach(p => {
+    const el = document.getElementById(`panel-${p}`);
+    if (el) el.style.display = p === id ? '' : 'none';
   });
   setActiveNav(id);
   closeSidebar();
-  loadPanel(id);
+  if (id==='shop')    loadShop();
+  if (id==='orders')  loadOrders();
+  if (id==='profile') loadProfile();
 }
+// Override global
+window.showPanel = navTo;
 
-async function loadPanel(id) {
-  if (id === 'shop')    await loadShop();
-  if (id === 'orders')  await loadOrders();
-  if (id === 'profile') loadProfileForm();
-}
-
-// ── SHOP ──
+/* ── SHOP ── */
 async function loadShop() {
-  // PRODUCTION: Fetch real active products from database
-  const { data, error } = await window.sb.from('products')
-    .select('*')
-    .eq('is_active', true)
-    .gt('quantity', 0) // Only show items in stock
-    .order('created_at', { ascending:false });
-    
-  if (error) {
-    toast("Error loading shop: " + error.message, "error");
-    return;
-  }
-  ALL_PRODUCTS = data || [];
-  renderProducts(ALL_PRODUCTS);
+  const grid = document.getElementById('shop-grid');
+  grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">⏳</div><h3>Loading…</h3></div>`;
+  const { data, error } = await window.sb.from('products').select('*').eq('is_active',true).order('created_at',{ascending:false});
+  if (error) { grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">⚠️</div><h3>${error.message}</h3></div>`; return; }
+  ALL_PRODS = data || [];
+  renderProds(ALL_PRODS);
 }
 
-function renderProducts(products) {
+function renderProds(list) {
   const grid = document.getElementById('shop-grid');
-  if (!products.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="es-icon">🌸</div><h3>No products available</h3><p>Check back soon!</p></div>`;
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🌸</div><h3>No products available</h3><p>Check back soon for fresh blooms!</p></div>`;
     return;
   }
-  grid.innerHTML = products.map(p => `
+  grid.innerHTML = list.map(p => `
     <div class="product-card">
       <div class="product-img">
-        ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}" onerror="this.parentElement.innerHTML='${prodEmoji(p.category)}'" />` : prodEmoji(p.category)}
-        <span class="product-cat-badge">${p.category||'flower'}</span>
+        ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}" loading="lazy" onerror="this.parentElement.innerHTML='${prodEmoji(p.category)}'" />` : prodEmoji(p.category)}
+        <span class="product-cat">${p.category||'flower'}</span>
       </div>
       <div class="product-body">
         <div class="product-name">${p.name}</div>
-        <div class="product-desc">${p.description||'Beautiful, fresh flowers'}</div>
+        <div class="product-desc">${p.description||'Beautiful fresh flowers'}</div>
         <div class="product-footer">
-          <div class="product-price"><sup>₹</sup>${Number(p.price).toLocaleString('en-IN')}</div>
-          <div class="product-qty">${p.quantity} left</div>
+          <div><div class="product-price">₹${Number(p.price).toLocaleString('en-IN')}</div><div class="product-qty">${p.quantity} in stock</div></div>
         </div>
       </div>
       <div class="product-actions">
-        <button class="btn btn-primary btn-sm w-full" onclick="openProductModal('${p.id}')">🛒 Order Now</button>
+        <button class="btn btn-primary btn-sm w-full" onclick="openProdModal('${p.id}')" ${p.quantity<1?'disabled':''}>
+          ${p.quantity<1?'Out of Stock':'🛒 Order Now'}
+        </button>
       </div>
     </div>`).join('');
 }
 
-// ── PRODUCT MODAL & ORDERING ──
-function openProductModal(id) {
-  SELECTED_PRODUCT = ALL_PRODUCTS.find(p => p.id === id);
-  if (!SELECTED_PRODUCT) return;
-  const p = SELECTED_PRODUCT;
+function filterProds() {
+  const q   = document.getElementById('q').value.toLowerCase();
+  const cat = document.getElementById('cat-filter').value;
+  const srt = document.getElementById('sort').value;
+  let list = ALL_PRODS.filter(p =>
+    (!q || p.name.toLowerCase().includes(q) || (p.description||'').toLowerCase().includes(q)) &&
+    (!cat || p.category === cat)
+  );
+  if (srt==='asc')  list.sort((a,b)=>a.price-b.price);
+  if (srt==='desc') list.sort((a,b)=>b.price-a.price);
+  renderProds(list);
+}
+
+/* ── PRODUCT MODAL ── */
+function openProdModal(id) {
+  SEL_PROD = ALL_PRODS.find(p=>p.id===id);
+  if (!SEL_PROD) return;
+  const p = SEL_PROD;
   document.getElementById('pm-name').textContent  = p.name;
-  document.getElementById('pm-desc').textContent  = p.description || '';
+  document.getElementById('pm-desc').textContent  = p.description||'';
   document.getElementById('pm-price').textContent = `₹${Number(p.price).toLocaleString('en-IN')}`;
-  document.getElementById('pm-qty').textContent   = `${p.quantity} in stock`;
-  document.getElementById('pm-addr').value = USER.address || '';
-  document.getElementById('pm-qty-input').value = '1';
-  
+  document.getElementById('pm-stock').textContent = `${p.quantity} in stock`;
+  document.getElementById('pm-qty').max = p.quantity;
+  document.getElementById('pm-addr').value = USER.address||'';
+  document.getElementById('pm-qty').value  = '1';
   const imgEl = document.getElementById('pm-img');
   imgEl.innerHTML = p.image_url
-    ? `<img src="${p.image_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='${prodEmoji(p.category)}'" />`
+    ? `<img src="${p.image_url}" alt="${p.name}" onerror="this.parentElement.innerHTML='${prodEmoji(p.category)}'" />`
     : prodEmoji(p.category);
-  document.getElementById('product-modal').classList.remove('hidden');
+  document.getElementById('prod-modal').classList.remove('hidden');
 }
 
 async function placeOrder() {
-  if (!SELECTED_PRODUCT) return;
-  const qty    = parseInt(document.getElementById('pm-qty-input').value) || 1;
-  const addr   = document.getElementById('pm-addr').value.trim();
-  const ptype  = document.getElementById('pm-payment').value;
-
-  if (!addr) { toast('Delivery address is required', 'error'); return; }
-  if (qty < 1 || qty > SELECTED_PRODUCT.quantity) {
-    toast(`Please enter quantity between 1 and ${SELECTED_PRODUCT.quantity}`, 'error'); return;
-  }
-
-  setBtn('place-order-btn', true);
+  if (!SEL_PROD) return;
+  const qty   = parseInt(document.getElementById('pm-qty').value)||1;
+  const addr  = document.getElementById('pm-addr').value.trim();
+  const ptype = document.getElementById('pm-pay').value;
+  if (!addr) { toast('Please enter a delivery address', 'error'); return; }
+  if (qty < 1 || qty > SEL_PROD.quantity) { toast(`Quantity must be between 1 and ${SEL_PROD.quantity}`, 'error'); return; }
+  btnLoad('order-btn', true, '⏳ Placing order…');
   try {
-    const total = SELECTED_PRODUCT.price * qty;
-    
-    // PRODUCTION: Insert real order into Supabase
+    const total = SEL_PROD.price * qty;
     const { data: order, error } = await window.sb.from('orders').insert({
-      buyer_id: USER.id, 
-      seller_id: SELECTED_PRODUCT.seller_id,
-      product_id: SELECTED_PRODUCT.id, 
-      quantity: qty,
-      total_amount: total, 
-      drop_address: addr,
-      payment_type: ptype,
-      order_status: 'placed',
-      payment_status: ptype === 'online' ? 'paid' : 'pending'
+      buyer_id: USER.id, seller_id: SEL_PROD.seller_id, product_id: SEL_PROD.id,
+      quantity: qty, total_amount: total, drop_address: addr,
+      payment_type: ptype, order_status: 'placed',
+      payment_status: ptype==='online' ? 'paid' : 'pending'
     }).select().single();
-
     if (error) throw error;
-
-    // Create real payment record
     await window.sb.from('payments').insert({
-      order_id: order.id, 
-      seller_id: SELECTED_PRODUCT.seller_id,
-      buyer_id: USER.id, 
-      amount: total,
-      status: ptype === 'online' ? 'admin_wallet' : 'pending',
-      payment_method: ptype
+      order_id: order.id, seller_id: SEL_PROD.seller_id, buyer_id: USER.id,
+      amount: total, status: ptype==='online' ? 'admin_wallet' : 'pending', payment_method: ptype
     });
-
-    // Update product stock in database
-    await window.sb.from('products')
-      .update({ quantity: SELECTED_PRODUCT.quantity - qty })
-      .eq('id', SELECTED_PRODUCT.id);
-
-    toast(`✅ Order placed! Total: ₹${total.toLocaleString('en-IN')}`, 'success');
-    document.getElementById('product-modal').classList.add('hidden');
-    SELECTED_PRODUCT = null;
-    loadShop(); // Refresh shop view
-  } catch(e) { 
-    toast(e.message, 'error'); 
-  } finally { 
-    setBtn('place-order-btn', false, '🛒 Place Order'); 
-  }
+    await window.sb.from('products').update({ quantity: SEL_PROD.quantity - qty }).eq('id', SEL_PROD.id);
+    toast(`Order placed! Total: ₹${total.toLocaleString('en-IN')} ✅`, 'success');
+    closeModal('prod-modal'); SEL_PROD = null;
+    ALL_PRODS = ALL_PRODS.map(p => p.id === order.product_id ? {...p, quantity: p.quantity-qty} : p);
+    renderProds(ALL_PRODS);
+  } catch(e) { toast(e.message, 'error'); }
+  finally { btnLoad('order-btn', false); }
 }
 
-// ── ORDERS ──
+/* ── ORDERS ── */
 async function loadOrders() {
-  // PRODUCTION: Join products to get names
-  const { data, error } = await window.sb
-    .from('orders')
-    .select('*, products(name, category)')
-    .eq('buyer_id', USER.id)
-    .order('created_at', { ascending:false });
-
-  if (error) {
-    toast("Error loading orders: " + error.message, "error");
-    return;
-  }
-  renderOrders(data || []);
-}
-
-function renderOrders(orders) {
   const el = document.getElementById('orders-list');
+  const { data, error } = await window.sb.from('orders').select('*, products(name,category)').eq('buyer_id',USER.id).order('created_at',{ascending:false});
+  if (error) { el.innerHTML = `<div class="alert alert-error">${error.message}</div>`; return; }
+  const orders = data || [];
+  // Update badge
+  const active = orders.filter(o=>!['delivered','returned','cancelled'].includes(o.order_status));
+  const badge = document.getElementById('ord-badge');
+  if (active.length) { badge.textContent = active.length; badge.classList.remove('hidden'); }
+  else badge.classList.add('hidden');
   if (!orders.length) {
-    el.innerHTML = `<div class="empty-state"><div class="es-icon">📭</div><h3>No orders yet</h3><p>Browse the shop and place your first order!</p></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><h3>No orders yet</h3><p>Browse our shop and place your first order!</p><button class="btn btn-primary mt-2" onclick="navTo('shop')">Browse Shop →</button></div>`;
     return;
   }
-
-  const active = orders.filter(o => !['delivered','returned','cancelled'].includes(o.order_status));
-  const badge = document.getElementById('orders-badge');
-  if (active.length) { 
-    badge.textContent = active.length; 
-    badge.style.display = ''; 
-  } else {
-    badge.style.display = 'none';
-  }
-
-  el.innerHTML = orders.map(o => `
+  const STEPS = ['placed','assigned','picked','delivered'];
+  el.innerHTML = orders.map(o => {
+    const status = o.order_status;
+    const si = STEPS.indexOf(status);
+    const timeline = status !== 'returned' && status !== 'cancelled' ? `
+      <div class="status-steps">
+        ${STEPS.map((s,i) => `
+          <div class="status-step">
+            <div class="dot ${i < si ? 'done' : i === si ? 'active' : 'pending'}">${['🕐','👤','📦','✅'][i]}</div>
+            ${i < STEPS.length-1 ? `<div class="line ${i < si ? 'done':''}"></div>` : ''}
+          </div>`).join('')}
+      </div>` : '';
+    return `
     <div class="order-card">
       <div class="order-header">
         <div>
           <div class="order-id">${shortId(o.id)}</div>
-          <div class="order-product">${o.products?.name || 'Product'}</div>
+          <div class="order-name">${o.products?.name||'Product'}</div>
         </div>
-        <div>${statusBadge(o.order_status)}</div>
+        ${statusBadge(status)}
       </div>
+      ${timeline}
       <div class="order-meta">
-        <div class="order-row"><span class="order-label">Amount</span><span class="order-value text-gold">${fmtCurrency(o.total_amount)}</span></div>
-        <div class="order-row"><span class="order-label">Payment</span>${paymentBadge(o.payment_type)}</div>
-        <div class="order-row"><span class="order-label">Deliver to</span><span class="order-value">${o.drop_address||'—'}</span></div>
+        <div class="order-row"><span class="order-row-label">Amount</span><span class="text-gold">${fmtCur(o.total_amount)}</span></div>
+        <div class="order-row"><span class="order-row-label">Payment</span>${payBadge(o.payment_type)}</div>
+        <div class="order-row"><span class="order-row-label">Deliver to</span><span class="text-sm">${o.drop_address||'—'}</span></div>
+        <div class="order-row"><span class="order-row-label">Date</span><span class="text-sm text-muted">${fmtDate(o.created_at)}</span></div>
       </div>
-    </div>`).join('');
+      ${status==='delivered' ? `<div class="order-actions"><button class="btn btn-danger btn-sm" onclick="returnOrder('${o.id}')">↩️ Request Return</button></div>` : ''}
+    </div>`;
+  }).join('');
 }
 
-// ── PROFILE ──
+async function returnOrder(id) {
+  if (!confirmAction('Request a return? Admin will review and contact you.')) return;
+  await window.sb.from('orders').update({order_status:'returned'}).eq('id',id).eq('buyer_id',USER.id);
+  await window.sb.from('payments').update({status:'returned'}).eq('order_id',id);
+  toast('Return requested. Admin will review. ✅', 'success');
+  loadOrders();
+}
+
+/* ── PROFILE ── */
+function loadProfile() {
+  document.getElementById('p-name').value  = USER.name||'';
+  document.getElementById('p-phone').value = USER.phone||'';
+  document.getElementById('p-email').value = USER.email||'';
+  document.getElementById('p-addr').value  = USER.address||'';
+  document.getElementById('prof-name').textContent = USER.name||'—';
+  document.getElementById('prof-av-wrap').innerHTML = renderUploadableAvatar(USER,'av-xl');
+}
+
+function onAvatarChange(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const container = document.getElementById('prof-av-wrap').querySelector('.avatar');
+  handleAvatarUpload(file, container, USER.id, url => {
+    USER.avatar_url = url;
+    renderUser();
+  });
+}
+
 async function saveProfile() {
   const name  = document.getElementById('p-name').value.trim();
   const phone = document.getElementById('p-phone').value.trim();
   const addr  = document.getElementById('p-addr').value.trim();
-  
   if (!name) { toast('Name is required', 'error'); return; }
-  setBtn('save-profile-btn', true);
-
-  try {
-    const { error } = await window.sb.from('users')
-      .update({ name, phone, address: addr })
-      .eq('id', USER.id);
-      
-    if (error) throw error;
-    
-    USER.name = name;
-    USER.phone = phone;
-    USER.address = addr;
-    renderUser();
-    document.getElementById('profile-name-display').textContent = name;
-    toast('Profile saved ✅', 'success');
-  } catch(e) { 
-    toast(e.message, 'error'); 
-  } finally { 
-    setBtn('save-profile-btn', false, 'Save Changes'); 
+  btnLoad('save-btn', true, '⏳ Saving…');
+  const { error } = await window.sb.from('users').update({ name, phone:phone||null, address:addr||null }).eq('id',USER.id);
+  if (error) { toast(error.message, 'error'); }
+  else {
+    USER = {...USER, name, phone, address:addr};
+    document.getElementById('prof-name').textContent = name;
+    renderUser(); toast('Profile saved ✅', 'success');
   }
+  btnLoad('save-btn', false);
 }
 
-// ── HELPERS ──
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-function hideSplash() {
-  const s = document.getElementById('loading-screen');
-  s.style.opacity = '0';
-  setTimeout(() => s.style.display = 'none', 600);
+async function resetPass() {
+  const { error } = await window.sb.auth.resetPasswordForEmail(USER.email);
+  if (error) toast(error.message, 'error');
+  else toast('Password reset email sent ✅', 'success');
 }
 
-// Global UI override
-window.showPanel = function(id) {
-  ['shop','orders','profile'].forEach(p => {
-    const el = document.getElementById(`panel-${p}`);
-    if (el) el.classList.toggle('active', p === id);
-  });
-  setActiveNav(id);
-  closeSidebar();
-  loadPanel(id);
-};
-
-
+/* ── Helpers ── */
+function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+function sleep(ms)      { return new Promise(r=>setTimeout(r,ms)); }
+function hideSplash()   { const s=document.getElementById('loading-screen'); s.style.opacity='0'; setTimeout(()=>s.style.display='none',500); }
 </script>
 </body>
 </html>
