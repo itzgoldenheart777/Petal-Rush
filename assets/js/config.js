@@ -1,70 +1,76 @@
-/* ═══════════════════════════════════════
-   PETAL RUSH — Supabase Configuration
-   ═══════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────
+   PETAL RUSH — Config & Theme
+───────────────────────────────────────────────────── */
 
-const STORAGE_KEY_URL = 'pr_supabase_url';
-const STORAGE_KEY_KEY = 'pr_supabase_key';
-
-// Loaded Supabase client (set after init)
+const PR_URL_KEY   = 'pr_url';
+const PR_ANON_KEY  = 'pr_anon';
+const PR_THEME_KEY = 'pr_theme';
 window.sb = null;
 
-/**
- * Load and initialize Supabase JS client from CDN
- */
-async function loadSupabase() {
-  return new Promise((resolve, reject) => {
-    if (window.supabase && window.supabase.createClient) { resolve(window.supabase); return; }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-    script.onload  = () => resolve(window.supabase);
-    script.onerror = () => reject(new Error('Failed to load Supabase SDK'));
-    document.head.appendChild(script);
+/* ── Theme ── */
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t || 'dark');
+  localStorage.setItem(PR_THEME_KEY, t);
+  document.querySelectorAll('.theme-toggle').forEach(el => {
+    el.textContent = t === 'light' ? '🌙' : '☀️';
+    el.title = t === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode';
+  });
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+}
+// Apply stored theme immediately to avoid flash
+(function() {
+  const t = localStorage.getItem(PR_THEME_KEY) || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+
+/* ── Supabase SDK ── */
+async function loadSdk() {
+  if (window.supabase?.createClient) return window.supabase;
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+    s.onload  = () => res(window.supabase);
+    s.onerror = () => rej(new Error('Could not load Supabase SDK. Check your internet connection.'));
+    document.head.appendChild(s);
   });
 }
 
-/**
- * Get stored credentials
- */
 function getCredentials() {
-  return {
-    url: localStorage.getItem(STORAGE_KEY_URL) || '',
-    key: localStorage.getItem(STORAGE_KEY_KEY) || ''
-  };
+  return { url: localStorage.getItem(PR_URL_KEY)||'', key: localStorage.getItem(PR_ANON_KEY)||'' };
 }
 
-/**
- * Save credentials and initialize client
- */
 async function initSupabase(url, key) {
-  localStorage.setItem(STORAGE_KEY_URL, url.trim());
-  localStorage.setItem(STORAGE_KEY_KEY, key.trim());
-  const lib = await loadSupabase();
+  localStorage.setItem(PR_URL_KEY, url.trim());
+  localStorage.setItem(PR_ANON_KEY, key.trim());
+  const lib = await loadSdk();
   window.sb = lib.createClient(url.trim(), key.trim());
   return window.sb;
 }
 
-/**
- * Try to init from stored credentials
- * Returns null if not configured
- */
 async function tryInitFromStorage() {
   const { url, key } = getCredentials();
   if (!url || !key) return null;
   try {
-    const lib = await loadSupabase();
+    const lib = await loadSdk();
     window.sb = lib.createClient(url, key);
     return window.sb;
-  } catch(e) {
-    console.error('Supabase init failed:', e);
-    return null;
-  }
+  } catch(e) { return null; }
 }
 
-/**
- * Clear stored credentials
- */
-function clearCredentials() {
-  localStorage.removeItem(STORAGE_KEY_URL);
-  localStorage.removeItem(STORAGE_KEY_KEY);
+function clearSupabase() {
+  localStorage.removeItem(PR_URL_KEY);
+  localStorage.removeItem(PR_ANON_KEY);
   window.sb = null;
+}
+
+function updateStoredCredentials(url, key) {
+  localStorage.setItem(PR_URL_KEY, url.trim());
+  localStorage.setItem(PR_ANON_KEY, key.trim());
+  // Reinit client with new creds
+  if (window.supabase?.createClient) {
+    window.sb = window.supabase.createClient(url.trim(), key.trim());
+  }
 }
