@@ -1,39 +1,29 @@
-/* ═══════════════════════════════════════
+/* ─────────────────────────────────────────────────────
    PETAL RUSH — Shared Utilities
-   ═══════════════════════════════════════ */
+───────────────────────────────────────────────────── */
 
-// ── TOAST ──
-function toast(msg, type = 'info') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
+/* ── Toast ── */
+function toast(msg, type='info') {
+  const root = document.getElementById('toast-root');
+  if (!root) return;
   const el = document.createElement('div');
   el.className = `toast ${type}`;
   el.textContent = msg;
-  container.appendChild(el);
-  setTimeout(() => {
-    el.classList.add('fade-out');
-    setTimeout(() => el.remove(), 300);
-  }, 3200);
+  root.appendChild(el);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 310); }, 3500);
 }
 
-// ── BUTTON LOADING STATE ──
-function setBtn(id, loading, loadText = '⏳ Please wait...') {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-  if (loading) {
-    btn._orig = btn.innerHTML;
-    btn.innerHTML = loadText;
-    btn.disabled = true;
-  } else {
-    btn.innerHTML = btn._orig || btn.innerHTML;
-    btn.disabled = false;
-  }
+/* ── Button loading ── */
+function btnLoad(id, on, text='') {
+  const b = document.getElementById(id); if (!b) return;
+  if (on) { b._orig = b.innerHTML; b.disabled = true; if (text) b.innerHTML = text; }
+  else { if (b._orig) b.innerHTML = b._orig; b.disabled = false; }
 }
 
-// ── STATUS BADGES ──
-const STATUS_MAP = {
+/* ── Status badges ── */
+const ST = {
   placed:        ['badge-gold',  '🕐'],
-  assigned:      ['badge-gold',  '👤'],
+  assigned:      ['badge-gold',  '📋'],
   picked:        ['badge-gold',  '📦'],
   delivered:     ['badge-green', '✅'],
   returned:      ['badge-rose',  '↩️'],
@@ -41,7 +31,7 @@ const STATUS_MAP = {
   pending:       ['badge-dim',   '⏳'],
   released:      ['badge-green', '💚'],
   admin_wallet:  ['badge-gold',  '🏦'],
-  held:          ['badge-rose',  '⏸️'],
+  held:          ['badge-rose',  '⏸'],
   cod_collected: ['badge-green', '💵'],
   active:        ['badge-green', '●'],
   inactive:      ['badge-dim',   '○'],
@@ -49,109 +39,83 @@ const STATUS_MAP = {
   banned:        ['badge-rose',  '🚫'],
   unverified:    ['badge-dim',   '—'],
 };
-function statusBadge(status) {
-  const [cls, icon] = STATUS_MAP[status] || ['badge-dim', '—'];
-  return `<span class="badge ${cls}">${icon} ${status || '—'}</span>`;
+function statusBadge(s) {
+  const [c, i] = ST[s] || ['badge-dim','—'];
+  return `<span class="badge ${c}">${i} ${s||'—'}</span>`;
+}
+function payBadge(t) {
+  if (t==='cod')    return `<span class="badge badge-gold">💵 COD</span>`;
+  if (t==='online') return `<span class="badge badge-green">💳 Online</span>`;
+  return `<span class="badge badge-dim">${t||'—'}</span>`;
+}
+function roleBadge(r) {
+  const icons = {buyer:'🛍️',seller:'🏪',delivery:'🚚',admin:'🛠️'};
+  const cls   = {buyer:'badge-dim',seller:'badge-gold',delivery:'badge-green',admin:'badge-rose'};
+  return `<span class="badge ${cls[r]||'badge-dim'}">${icons[r]||''} ${r||'—'}</span>`;
 }
 
-function paymentBadge(type) {
-  if (type === 'cod')    return `<span class="badge badge-gold">💵 COD</span>`;
-  if (type === 'online') return `<span class="badge badge-green">💳 Online</span>`;
-  return `<span class="badge badge-dim">${type || '—'}</span>`;
-}
-
-function roleBadge(role) {
-  const icons = { buyer: '🛍️', seller: '🏪', delivery: '🚚', admin: '🛠️' };
-  const cls   = { buyer: 'badge-dim', seller: 'badge-gold', delivery: 'badge-green', admin: 'badge-rose' };
-  return `<span class="badge ${cls[role]||'badge-dim'}">${icons[role]||''} ${role}</span>`;
-}
-
-// ── DATE FORMAT ──
+/* ── Formatters ── */
 function fmtDate(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+  return new Date(d).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'});
+}
+function fmtCur(n) { return '₹' + Number(n||0).toLocaleString('en-IN'); }
+function shortId(id) { return id ? '#' + String(id).replace(/-/g,'').slice(-8).toUpperCase() : '—'; }
+const prodEmoji = cat => ({'flowers':'🌸','bouquets':'💐','plants':'🪴','gifts':'🎁'}[cat]||'🌼');
+
+/* ── Sidebar ── */
+function openSidebar()   { document.getElementById('sidebar')?.classList.add('open'); document.getElementById('sb-overlay')?.classList.add('visible'); }
+function closeSidebar()  { document.getElementById('sidebar')?.classList.remove('open'); document.getElementById('sb-overlay')?.classList.remove('visible'); }
+function toggleSidebar() { document.getElementById('sidebar')?.classList.contains('open') ? closeSidebar() : openSidebar(); }
+
+/* ── Nav active ── */
+function setActiveNav(id) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.panel === id));
 }
 
-// ── PRODUCT EMOJI ──
-const PROD_EMOJI = { flowers:'🌸', bouquets:'💐', plants:'🪴', gifts:'🎁' };
-function prodEmoji(cat) { return PROD_EMOJI[cat] || '🌼'; }
-
-// ── SIDEBAR TOGGLE ──
-function openSidebar() {
-  document.getElementById('sidebar')?.classList.add('open');
-  document.getElementById('sidebar-overlay')?.classList.add('visible');
-}
-function closeSidebar() {
-  document.getElementById('sidebar')?.classList.remove('open');
-  document.getElementById('sidebar-overlay')?.classList.remove('visible');
-}
-function toggleSidebar() {
-  const sb = document.getElementById('sidebar');
-  sb?.classList.contains('open') ? closeSidebar() : openSidebar();
-}
-
-// ── ACTIVE NAV ──
-function setActiveNav(panelId) {
-  document.querySelectorAll('.nav-item').forEach(n => {
-    n.classList.toggle('active', n.dataset.panel === panelId);
-  });
-}
-
-// ── PANEL SWITCHER ──
-function showPanel(id) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  const target = document.getElementById(`panel-${id}`);
-  if (target) target.classList.add('active');
-  setActiveNav(id);
-  closeSidebar();
-  window._currentPanel = id;
-}
-
-// ── GPS / LOCATION ──
-function detectGPS(targetInputId, btnId) {
-  if (!navigator.geolocation) { toast('Geolocation not supported', 'error'); return; }
-  setBtn(btnId, true, '📍 Detecting...');
+/* ── GPS ── */
+function detectGPS(inputId, btnId) {
+  if (!navigator.geolocation) { toast('Geolocation not supported by your browser', 'error'); return; }
+  btnLoad(btnId, true, '📍 Locating…');
   navigator.geolocation.getCurrentPosition(
     async pos => {
       const { latitude: lat, longitude: lng } = pos.coords;
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
-        const d = await res.json();
-        const el = document.getElementById(targetInputId);
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+        const d = await r.json();
+        const el = document.getElementById(inputId);
         if (el) el.value = d.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
         toast('Location detected ✅', 'success');
       } catch {
-        const el = document.getElementById(targetInputId);
+        const el = document.getElementById(inputId);
         if (el) el.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       }
-      setBtn(btnId, false);
+      btnLoad(btnId, false);
     },
-    () => { toast('Location access denied', 'error'); setBtn(btnId, false); }
+    () => { toast('Location access denied. Please allow location.', 'error'); btnLoad(btnId, false); },
+    { enableHighAccuracy: true, timeout: 8000 }
   );
 }
 
-function mapsNavLink(address) {
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-}
+function mapsLink(addr) { return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`; }
 
-// ── SHORT ID ──
-function shortId(id) {
-  if (!id) return '—';
-  return '#' + String(id).replace(/-/g,'').slice(-8).toUpperCase();
-}
-
-// ── NUMBER FORMAT ──
-function fmtCurrency(n) {
-  return '₹' + Number(n||0).toLocaleString('en-IN');
-}
-
-// ── CONFIRM DIALOG ──
-function confirmAction(msg) { return window.confirm(msg); }
-
-// ── KEYBOARD SHORTCUTS ──
+/* ── Keyboard ── */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => m.classList.add('hidden'));
     closeSidebar();
   }
 });
+
+/* ── Confirm ── */
+const confirmAction = msg => window.confirm(msg);
+
+/* ── Panel switcher (override per page) ── */
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.toggle('active', p.id === `panel-${id}`);
+    p.style.display = p.id === `panel-${id}` ? '' : 'none';
+  });
+  setActiveNav(id);
+  closeSidebar();
+}
