@@ -1,0 +1,40 @@
+{
+  "name": "Petal Rush",
+  "short_name": "Petal Rush",
+  "description": "Order Flowers Like Never Before — Fresh · Fast · Beautiful",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
+  "background_color": "#F8F5F7",
+  "theme_color": "#E8196B",
+  "orientation": "portrait-primary",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Shop Flowers", "short_name": "Shop", "description": "Browse fresh flowers", "url": "./buyer.html", "icons": [{"src": "icon-192.png", "sizes": "192x192"}] },
+    { "name": "My Orders",    "short_name": "Orders", "description": "Track your orders", "url": "./buyer.html#orders", "icons": [{"src": "icon-192.png", "sizes": "192x192"}] }
+  ],
+  "categories": ["shopping", "lifestyle", "food"],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://yourdomain.com/manifest.json"
+    }
+  ]
+}
