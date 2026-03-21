@@ -49,34 +49,62 @@ function logout() { auth.signOut().then(() => window.location.href = 'index.html
 
 // ── Toast ──
 function showToast(msg, type = 'success') {
+  let wrap = document.getElementById('toast-wrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'toast-wrap';
+    document.body.appendChild(wrap);
+  }
+  const icons = {success:'✅', error:'❌', info:'ℹ️', warn:'⚠️'};
   const t = document.createElement('div');
   t.className = `toast toast-${type}`;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  requestAnimationFrame(() => t.classList.add('show'));
-  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 3200);
+  t.innerHTML = `<span>${icons[type]||''}</span><span>${msg}</span>`;
+  wrap.appendChild(t);
+  setTimeout(() => {
+    t.classList.add('hide');
+    setTimeout(() => t.remove(), 320);
+  }, 3200);
 }
 
 // ── Sidebar mobile toggle ──
 function initSidebar() {
+  // Nothing needed here — HTML onclick handlers call toggleSidebar()
+  // This function is kept for backwards compatibility
+}
+// Global sidebar toggle — called from onclick in HTML
+function toggleSidebar() {
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.querySelector('.sidebar-overlay');
-  const ham = document.querySelector('.hamburger');
-  if (ham) ham.addEventListener('click', () => { sidebar.classList.toggle('open'); overlay.classList.toggle('open'); });
-  if (overlay) overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('open'); });
+  if (!sidebar) return;
+  sidebar.classList.toggle('open');
+  if (overlay) overlay.classList.toggle('visible');
+}
+function closeSidebar() {
+  document.querySelector('.sidebar')?.classList.remove('open');
+  document.querySelector('.sidebar-overlay')?.classList.remove('visible');
 }
 
 // ── Nav page switcher ──
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.bn-item').forEach(n => n.classList.remove('active'));
   const pg = document.getElementById('page-' + id);
   if (pg) pg.classList.add('active');
+  // Sidebar nav item
   const ni = document.querySelector(`.nav-item[data-page="${id}"]`);
   if (ni) ni.classList.add('active');
+  // Bottom nav item
+  const bi = document.querySelector(`.bn-item[data-page="${id}"]`);
+  if (bi) bi.classList.add('active');
+  // Update topbar title
+  const tt = document.getElementById('topTitle');
+  if (tt && ni) tt.textContent = ni.textContent.replace(/^[^\w\s]+/, '').trim().replace(/^\w+/, s=>s);
   // Close mobile sidebar
-  document.querySelector('.sidebar')?.classList.remove('open');
-  document.querySelector('.sidebar-overlay')?.classList.remove('open');
+  closeSidebar();
+  // Scroll to top
+  document.querySelector('.main-content')?.scrollTo(0,0);
+  window.scrollTo(0,0);
   if (typeof window['onPageShow_' + id] === 'function') window['onPageShow_' + id]();
 }
 
@@ -124,10 +152,10 @@ function fmtDate(ts) {
 
 // ── Loader ──
 function showLoader(msg = 'Loading…') {
-  const d = document.createElement('div');
-  d.className = 'loader-overlay'; d.id = 'global-loader';
-  d.innerHTML = `<div style="text-align:center"><div class="spinner"></div><p style="margin-top:12px;font-size:.88rem;color:var(--gray)">${msg}</p></div>`;
-  document.body.appendChild(d);
+  let d = document.getElementById('global-loader');
+  if (!d) { d = document.createElement('div'); d.id='global-loader'; document.body.appendChild(d); }
+  d.className = 'loader-overlay';
+  d.innerHTML = `<div style="text-align:center"><div class="spinner"></div><p style="margin-top:12px;font-size:.86rem;color:var(--gray)">${msg}</p></div>`;
 }
 function hideLoader() { document.getElementById('global-loader')?.remove(); }
 
@@ -135,3 +163,69 @@ function hideLoader() { document.getElementById('global-loader')?.remove(); }
 let _otpCode = '';
 function generateOTP() { _otpCode = Math.floor(100000 + Math.random() * 900000).toString(); return _otpCode; }
 function verifyOTP(entered) { return entered === _otpCode; }
+
+
+// ════════════════════════════════════
+// DARK MODE — fully working
+// ════════════════════════════════════
+function initDarkMode() {
+  const saved = localStorage.getItem('pr_theme');
+  if (saved === 'dark') {
+    document.body.classList.add('dark');
+    document.body.classList.remove('light');
+  } else if (saved === 'light') {
+    document.body.classList.add('light');
+    document.body.classList.remove('dark');
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches) {
+    document.body.classList.add('dark');
+  }
+  updateThemeToggleIcons();
+}
+
+function toggleDarkMode() {
+  const isDark = document.body.classList.contains('dark') ||
+    (!document.body.classList.contains('light') && window.matchMedia('(prefers-color-scheme:dark)').matches);
+  if (isDark) {
+    document.body.classList.remove('dark');
+    document.body.classList.add('light');
+    localStorage.setItem('pr_theme', 'light');
+  } else {
+    document.body.classList.add('dark');
+    document.body.classList.remove('light');
+    localStorage.setItem('pr_theme', 'dark');
+  }
+  updateThemeToggleIcons();
+  // Update meta theme-color
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = document.body.classList.contains('dark') ? '#1A0F18' : '#E8196B';
+}
+
+function updateThemeToggleIcons() {
+  const isDark = document.body.classList.contains('dark') ||
+    (!document.body.classList.contains('light') && window.matchMedia('(prefers-color-scheme:dark)').matches);
+  // Update all theme toggle icons
+  document.querySelectorAll('.topbar-icon-btn[onclick*="toggleDarkMode"]').forEach(btn => {
+    btn.textContent = isDark ? '☀️' : '🌙';
+    btn.title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+  });
+  document.querySelectorAll('.theme-toggle-icon').forEach(el => {
+    el.textContent = isDark ? '☀️' : '🌙';
+  });
+  document.querySelectorAll('.theme-toggle-text').forEach(el => {
+    el.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+  });
+}
+
+// Run immediately (before page renders) to prevent flash
+(function() {
+  const saved = localStorage.getItem('pr_theme');
+  if (saved === 'dark') document.documentElement.classList.add('dark-init');
+  if (saved === 'light') document.documentElement.classList.add('light-init');
+})();
+
+// Run after DOM loads
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDarkMode);
+} else {
+  initDarkMode();
+}
