@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#E8196B"/>
+  <title>Admin — Petal Rush</title>
+  <link rel="stylesheet" href="shared.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    /* ─── Admin accent: pink (default) ─── */
+    :root { --ac:var(--pink); --ac-d:var(--pink-d); --ac-l:var(--pink-l); }
+
+    /* ─── Quick-summary row under stat cards ─── */
+    .summary-row{
+      display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;
+    }
+    .summary-chip{
+      flex:1;min-width:120px;
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius-sm);padding:10px 14px;
+      display:flex;align-items:center;gap:8px;
+    }
+    .summary-chip-icon{font-size:1.1rem;}
+    .summary-chip-text{font-size:.78rem;font-weight:500;color:var(--text-gray);}
+    .summary-chip-val{font-size:.95rem;font-weight:700;color:var(--text);}
+
+    /* ─── Admin-specific two-panel grid ─── */
+    .admin-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+    @media(max-width:900px){ .admin-grid{grid-template-columns:1fr;} }
+
+    /* ─── Mini avatar in table ─── */
+    .tbl-avatar{
+      width:32px;height:32px;border-radius:9px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:.8rem;font-weight:700;color:#fff;
+      flex-shrink:0;
+    }
+    .tbl-user{display:flex;align-items:center;gap:8px;}
+    .tbl-user-name{font-weight:600;font-size:.84rem;white-space:nowrap;}
+    .tbl-user-email{font-size:.73rem;color:var(--text-gray);}
+
+    /* ─── Revenue chart area ─── */
+    .chart-placeholder{
+      height:160px;background:var(--surface2);
+      border-radius:10px;display:flex;align-items:center;
+      justify-content:center;color:var(--text-light);
+      font-size:.84rem;margin-bottom:4px;
+      border:2px dashed var(--border);
+    }
+
+    /* ─── Setting row ─── */
+    .setting-row{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 0;border-bottom:1px solid var(--border);gap:12px;
+    }
+    .setting-row:last-child{border:none;}
+    .setting-label{font-size:.87rem;font-weight:600;color:var(--text);}
+    .setting-sub{font-size:.74rem;color:var(--text-gray);margin-top:2px;}
+    /* Toggle switch */
+    .toggle{
+      width:46px;height:26px;border-radius:50px;
+      background:var(--border2);position:relative;
+      cursor:pointer;flex-shrink:0;transition:.25s;border:none;
+    }
+    .toggle.on{background:var(--green);}
+    .toggle::after{
+      content:'';width:20px;height:20px;border-radius:50%;
+      background:#fff;position:absolute;top:3px;left:3px;
+      transition:.25s;box-shadow:0 1px 3px rgba(0,0,0,.3);
+    }
+    .toggle.on::after{transform:translateX(20px);}
+
+    /* ─── Announcement card ─── */
+    .announce-card{
+      border-left:4px solid var(--pink);
+      background:var(--pink-l);border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+      padding:12px 14px;margin-bottom:10px;
+    }
+    .announce-card.green{border-color:var(--green);background:var(--green-l);}
+    .announce-card.blue{border-color:var(--blue);background:var(--blue-l);}
+    .announce-title{font-size:.87rem;font-weight:700;color:var(--text);margin-bottom:2px;}
+    .announce-sub{font-size:.76rem;color:var(--text-gray);}
+
+    /* ─── Mobile: hide non-essential table columns ─── */
+    @media(max-width:640px){
+      .hide-xs{ display:none !important; }
+    }
+    @media(max-width:768px){
+      .admin-grid{ gap:10px; }
+      .summary-row{ gap:8px; }
+      .summary-chip{ padding:8px 10px; min-width:100px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════ FLASH PREVENTION ════════ -->
+<script>
+  (function(){
+    try {
+      var s = localStorage.getItem('pr_theme');
+      if (s === 'dark' || (!s && window.matchMedia('(prefers-color-scheme:dark)').matches)) {
+        document.documentElement.classList.add('dark-pre');
+      } else {
+        document.documentElement.classList.add('light-pre');
+      }
+    } catch(e) {}
+  })();
+</script>
+
+<!-- ════════ LOADER ════════ -->
+<div class="loader-overlay" id="loader">
+  <div class="spinner"></div>
+</div>
+
+<!-- ════════ TOPBAR (mobile only) ════════ -->
+<header class="topbar">
+  <button class="topbar-ham" id="hamBtn" aria-label="Open menu">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+  <div class="topbar-logo">
+    <img src="logo-light.png" alt="Petal Rush" class="logo-light" style="height:30px"/>
+    <img src="logo-dark.png"  alt="Petal Rush" class="logo-dark"  style="height:30px"/>
+  </div>
+  <span class="topbar-title" id="topbarTitle">Dashboard</span>
+  <div class="topbar-actions">
+    <button class="t-icon-btn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+    <button class="t-icon-btn" title="Notifications">
+      🔔
+      <span class="t-badge" id="notifBadge" style="display:flex">3</span>
+    </button>
+  </div>
+</header>
+
+<!-- ════════ SIDEBAR OVERLAY ════════ -->
+<div class="sidebar-overlay" id="overlay"></div>
+
+<!-- ════════ LAYOUT ════════ -->
+<div class="layout">
+
+  <!-- ══ SIDEBAR ══ -->
+  <nav class="sidebar" id="sidebar">
+
+    <div class="sidebar-logo">
+      <img src="logo-light.png" alt="Petal Rush" class="logo-light" style="height:40px"/>
+      <img src="logo-dark.png"  alt="Petal Rush" class="logo-dark"  style="height:40px"/>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="s-avatar" style="background:linear-gradient(135deg,var(--pink),var(--pink-d))" id="adminAvatar">A</div>
+      <div>
+        <div class="s-name" id="adminName">Admin</div>
+        <div class="s-role">Super Administrator</div>
+        <span class="s-pill pill-active">● Active</span>
+      </div>
+    </div>
+
+    <div class="nav" role="navigation">
+      <div class="nav-section-title">Main</div>
+      <a class="nav-item active" data-page="dashboard" onclick="showPage('dashboard',this)">
+        <span class="ni">📊</span> Dashboard
+      </a>
+      <a class="nav-item" data-page="orders" onclick="showPage('orders',this)">
+        <span class="ni">📦</span> Orders
+        <span class="nav-badge" id="sideOrderBadge">12</span>
+      </a>
+      <a class="nav-item" data-page="products" onclick="showPage('products',this)">
+        <span class="ni">🌸</span> Products
+      </a>
+      <a class="nav-item" data-page="categories" onclick="showPage('categories',this)">
+        <span class="ni">🗂️</span> Categories
+      </a>
+
+      <div class="nav-section-title">People</div>
+      <a class="nav-item" data-page="sellers" onclick="showPage('sellers',this)">
+        <span class="ni">🏪</span> Sellers
+      </a>
+      <a class="nav-item" data-page="buyers" onclick="showPage('buyers',this)">
+        <span class="ni">👥</span> Buyers
+      </a>
+      <a class="nav-item" data-page="delivery" onclick="showPage('delivery',this)">
+        <span class="ni">🛵</span> Delivery Partners
+      </a>
+
+      <div class="nav-section-title">Finance</div>
+      <a class="nav-item" data-page="payouts" onclick="showPage('payouts',this)">
+        <span class="ni">💸</span> Payouts
+      </a>
+      <a class="nav-item" data-page="revenue" onclick="showPage('revenue',this)">
+        <span class="ni">📈</span> Revenue
+      </a>
+
+      <div class="nav-section-title">System</div>
+      <a class="nav-item" data-page="announcements" onclick="showPage('announcements',this)">
+        <span class="ni">📢</span> Announcements
+      </a>
+      <a class="nav-item" data-page="settings" onclick="showPage('settings',this)">
+        <span class="ni">⚙️</span> Settings
+      </a>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="theme-toggle" onclick="toggleTheme()" role="button" tabindex="0">
+        <span class="tt-icon">🌙</span>
+        <span class="tt-text">Dark Mode</span>
+        <div class="tt-track"><div class="tt-thumb"></div></div>
+      </div>
+      <button class="logout-btn" onclick="adminLogout()">
+        <span>🚪</span> Sign Out
+      </button>
+    </div>
+  </nav>
+
+  <!-- ══ MAIN CONTENT ══ -->
+  <main class="main-content">
+
+    <!-- ══════════════════════════════════════
+         PAGE: DASHBOARD
+    ══════════════════════════════════════ -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-hdr">
+        <div>
+          <h1>🌸 Dashboard</h1>
+          <p>Welcome back, Admin — here's what's happening today.</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-ghost btn-sm">📥 Export</button>
+          <button class="btn btn-primary btn-sm">＋ Add Product</button>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-val" id="statOrders">—</div>
+          <div class="stat-lbl">Total Orders</div>
+          <span class="stat-trend up">▲ 14%</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-val" id="statRevenue">—</div>
+          <div class="stat-lbl">Revenue</div>
+          <span class="stat-trend up">▲ 8%</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏪</div>
+          <div class="stat-val" id="statSellers">—</div>
+          <div class="stat-lbl">Sellers</div>
+          <span class="stat-trend up">▲ 3</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-val" id="statBuyers">—</div>
+          <div class="stat-lbl">Buyers</div>
+          <span class="stat-trend up">▲ 22</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🌸</div>
+          <div class="stat-val" id="statProducts">—</div>
+          <div class="stat-lbl">Products</div>
+          <span class="stat-trend up">▲ 5</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🛵</div>
+          <div class="stat-val" id="statDelivery">—</div>
+          <div class="stat-lbl">Delivery Partners</div>
+          <span class="stat-trend down">▼ 1</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-val" id="statPending">—</div>
+          <div class="stat-lbl">Pending Orders</div>
+          <span class="stat-trend up">▲ 3</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-val" id="statDelivered">—</div>
+          <div class="stat-lbl">Delivered Today</div>
+          <span class="stat-trend up">▲ 9</span>
+        </div>
+      </div>
+
+      <!-- Quick info row -->
+      <div class="summary-row">
+        <div class="summary-chip">
+          <span class="summary-chip-icon">🕐</span>
+          <div>
+            <div class="summary-chip-text">Last Updated</div>
+            <div class="summary-chip-val" id="lastUpdated">—</div>
+          </div>
+        </div>
+        <div class="summary-chip">
+          <span class="summary-chip-icon">📍</span>
+          <div>
+            <div class="summary-chip-text">Serving</div>
+            <div class="summary-chip-val">Mumbai, IN</div>
+          </div>
+        </div>
+        <div class="summary-chip">
+          <span class="summary-chip-icon">🚨</span>
+          <div>
+            <div class="summary-chip-text">Alerts</div>
+            <div class="summary-chip-val" id="alertCount">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-grid">
+        <!-- Recent Orders -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div class="card-title" style="margin:0">Recent Orders</div>
+            <button class="btn btn-ghost btn-sm" onclick="showPage('orders',null)">View All</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                  <th class="hide-xs">Buyer</th>
+                </tr>
+              </thead>
+              <tbody id="dashRecentOrders">
+                <tr><td colspan="4" class="wrap" style="text-align:center;color:var(--text-gray);padding:20px">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent Sellers -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div class="card-title" style="margin:0">New Sellers</div>
+            <button class="btn btn-ghost btn-sm" onclick="showPage('sellers',null)">View All</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Seller</th>
+                  <th>Status</th>
+                  <th class="hide-xs">Products</th>
+                </tr>
+              </thead>
+              <tbody id="dashNewSellers">
+                <tr><td colspan="3" class="wrap" style="text-align:center;color:var(--text-gray);padding:20px">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE: ORDERS
+    ══════════════════════════════════════ -->
+    <div class="page" id="page-orders">
+      <div class="page-hdr">
+        <div>
+          <h1>📦 Orders</h1>
+          <p>Manage all customer orders</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-ghost btn-sm" onclick="exportOrders()">📥 Export CSV</button>
+        </div>
+      </div>
+
+      <!-- Toolbar: row 1 = search, row 2 = filters + buttons -->
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <input type="search" class="search-inp" id="orderSearch" placeholder="🔍 Search orders, buyer..." oninput="filterOrders()"/>
+        </div>
+        <div class="toolbar-row-2">
+          <select class="filter-sel" id="orderStatusFilter" onchange="filterOrders()">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="packed">Packed</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select class="filter-sel" id="orderPayFilter" onchange="filterOrders()">
+            <option value="">All Payment</option>
+            <option value="cod">COD</option>
+            <option value="prepaid">Prepaid</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Status chip filter -->
+      <div class="chip-row" id="orderChips">
+        <button class="chip active" data-val="" onclick="chipFilter(this,'orderStatusFilter')">All</button>
+        <button class="chip" data-val="pending" onclick="chipFilter(this,'orderStatusFilter')">⏳ Pending</button>
+        <button class="chip" data-val="confirmed" onclick="chipFilter(this,'orderStatusFilter')">✅ Confirmed</button>
+        <button class="chip" data-val="shipped" onclick="chipFilter(this,'orderStatusFilter')">🚚 Shipped</button>
+        <button class="chip" data-val="delivered" onclick="chipFilter(this,'orderStatusFilter')">📬 Delivered</button>
+        <button class="chip" data-val="cancelled" onclick="chipFilter(this,'orderStatusFilter')">❌ Cancelled</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table sticky-first" id="ordersTable">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Buyer</th>
+                <th class="hide-xs">Seller</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th class="hide-xs">Payment</th>
+                <th class="hide-xs">Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ordersBody">
+              <tr><td colspan="8" class="wrap" style="text-align:center;color:var(--text-gray);padding:28px">
+                <div class="spinner" style="margin:0 auto 10px"></div> Loading orders...
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE: PRODUCTS
+    ══════════════════════════════════════ -->
+    <div class="page" id="page-products">
+      <div class="page-hdr">
+        <div>
+          <h1>🌸 Products</h1>
+          <p>All products across all sellers</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary btn-sm" onclick="openModal('addProductModal')">＋ Add Product</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <input type="search" class="search-inp" id="productSearch" placeholder="🔍 Search products..." oninput="filterProducts()"/>
+        </div>
+        <div class="toolbar-row-2">
+          <select class="filter-sel" id="productCatFilter" onchange="filterProducts()">
+            <option value="">All Categories</option>
+          </select>
+          <select class="filter-sel" id="productSellerFilter" onchange="filterProducts()">
+            <option value="">All Sellers</option>
+          </select>
+          <select class="filter-sel" id="productStockFilter" onchange="filterProducts()">
+            <option value="">All Stock</option>
+            <option value="instock">In Stock</option>
+            <option value="outofstock">Out of Stock</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table" id="productsTable">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th class="hide-xs">Category</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th class="hide-xs">Seller</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="productsBody">
+              <tr><td colspan="6" class="wrap" style="text-align:center;color:var(--text-gray);padding:28px">
+                <div class="spinner" style="margin:0 auto 10px"></div> Loading products...
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE: CATEGORIES
+    ══════════════════════════════════════ -->
+    <div class="page" id="page-categories">
+      <div class="page-hdr">
+        <div>
+          <h1>🗂️ Categories</h1>
+          <p>Manage flower categories</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary btn-sm" onclick="openModal('addCatModal')">＋ New Category</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table" id="catsTable">
+            <thead>
+              <tr><th>Icon</th><th>Name</th><th>Slug</th><th class="hide-xs">Products</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="catsBody">
+              <tr><td colspan="5" class="wrap" style="text-align:center;color:var(--text-gray);padding:28px">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE: SELLERS
+    ══════════════════════════════════════ -->
+    <div class="page" id="page-sellers">
+      <div class="page-hdr">
+        <div>
+          <h1>🏪 Sellers</h1>
+          <p>Manage seller accounts & approvals</p>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <input type="search" class="search-inp" id="sellerSearch" placeholder="🔍 Search sellers..." oninput="filterSellers()"/>
+        </div>
+        <div class="toolbar-row-2">
+          <select class="filter-sel" id="sellerStatusFilter" onchange="filterSellers()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="pending">Pending</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table" id="sellersTable">
+            <thead>
+              <tr>
+                <th>Seller</th>
+                <th>Store</th>
+                <th class="hide-xs">Phone</th>
+                <th>Status</th>
+                <th class="hide-xs">Orders</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="sellersBody">
+              <tr><td colspan="6" class="wrap" style="text-align:center;color:var(--text-gray);padding:28px">
+                <div class="spinner" style="margin:0 auto 10px"></div> Loading sellers...
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE: BUYERS
+    ══════════════════════════════════════ -->
+    <div class="page" id="page-buyers">
+      <div class="page-hdr">
+        <div><h1>👥 Buyers</h1><p>All registered buyers</p></div>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <input type="search" class="search-inp" id="buyerSearch" placeholder="🔍 Search buyers..."/>
+        </div>
+        <div class="toolbar-row-2">
+          <select class="filter-sel">
+            <option value="">All Status</option>
+            <option>Active</option><option>Blocked</option>
+          </select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table" id="buyersTable">
+            <thead>
+              <tr>
+                <th>Buyer</th>
+                <th class="hide-xs">Phone</th>
+                <th class="hide-xs">Orders</th>
+                <th>Spent</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="buyersBody">
+              <tr><td colspan="5" class="wrap" style="text-align:center;color:var(--text-gray);padding:28px">
+                <div class="spinner" style="margin:0 auto 10px"></div> Loading buyers...
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE: DELIVERY
+    ══════════════════════════════════════ -->
+    <div class="page" id="page-delivery">
+      <div class="page-hdr">
+        <div><h1>🛵 Delivery Partners</h1><p>Manage delivery agents</p></div>
+        <div class="btn-group">
+          <button class="btn btn-primary btn-sm" onclick="openModal('addDeliveryModal')">＋ Add Partner</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table" id="deliveryTable">
+            <thead>
+              <tr>
+                <th>Partner</th>
+                <th class="hide-xs">Phone</th>
+                <th>Status</th>
+                <th class="hide-xs">Deliveries</th>
+                <th class="hide-xs">Earnings</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="deliveryBody">
+              <tr><td colspan="6" class="wrap" style="text-align:center;color:var(--text-gray);padding:28px">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE: PAYOUTS
+    ══════════════════════════════════════ -->
+    <div class="page" id="page-payouts">
+      <div class="page-hdr">
+        <div><h1>💸 Payouts</h1><p>Seller payout requests</p></div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table" id="payoutsTable">
+            <thead>
+              <tr>
+                <th>Seller</th>
+                <th>Amount</th>
+                <th class="hide-xs">Method</th>
+                <th>Status</th>
+                <th class="hide-xs">Requested</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="payoutsBody">
+              <tr><td colspan="6" class="wrap" style="text-align:center;color:var(--text-gray);padding:28px">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE: REVENUE
+    ══════════════════════════════════════ -->
+    <div class="page" id="page-revenue">
+      <div class="page-hdr">
+        <div><h1>📈 Revenue</h1><p>Financial overview</p></div>
+        <div class="btn-group">
+          <button class="btn btn-ghost btn-sm">📥 Export Report</button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-val" id="revTotal">—</div>
+          <div class="stat-lbl">Total Revenue</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏪</div>
+          <div class="stat-val" id="revSeller">—</div>
+          <div class="stat-lbl">Seller Payouts</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🛵</div>
+          <div class="stat-val" id="revDelivery">—</div>
+          <div class="stat-lbl">Delivery Earnings</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-val" id="revNet">—</div>
+          <div class="stat-lbl">Platform Net</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Revenue Chart (Last 7 Days)</div>
+        <div class="chart-placeholder">📊 Revenue chart will appear here</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE: ANNOUNCEMENTS
+    ══════════════════════════════════════ -->
+    <div class="page" id="page-announcements">
+      <div class="page-hdr">
+        <div><h1>📢 Announcements</h1><p>Broadcast messages to all panels</p></div>
+        <div class="btn-group">
+          <button class="btn btn-primary btn-sm" onclick="openModal('addAnnModal')">＋ New Announcement</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="announcementsList">
+          <div class="empty"><div class="e-icon">📢</div><p>No announcements yet.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PAGE: SETTINGS
+    ══════════════════════════════════════ -->
+    <div class="page" id="page-settings">
+      <div class="page-hdr">
+        <div><h1>⚙️ Settings</h1><p>Platform configuration</p></div>
+      </div>
+
+      <div class="admin-grid">
+        <!-- General Settings -->
+        <div class="card">
+          <div class="card-title">General</div>
+          <div class="field">
+            <label>Platform Name</label>
+            <input type="text" value="Petal Rush" id="settingPlatformName"/>
+          </div>
+          <div class="field">
+            <label>Support Email</label>
+            <input type="email" placeholder="support@petalrush.in" id="settingEmail"/>
+          </div>
+          <div class="field">
+            <label>Support Phone</label>
+            <input type="tel" placeholder="+91 9800000000" id="settingPhone"/>
+          </div>
+          <div class="field">
+            <label>Default City</label>
+            <input type="text" value="Mumbai" id="settingCity"/>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="saveGeneralSettings()">💾 Save Settings</button>
+        </div>
+
+        <!-- Commission & Fee Settings -->
+        <div class="card">
+          <div class="card-title">Commission & Fees</div>
+          <div class="field-row">
+            <div class="field">
+              <label>Platform Fee (%)</label>
+              <input type="number" value="10" id="settingPlatformFee" min="0" max="100"/>
+            </div>
+            <div class="field">
+              <label>Seller Split (%)</label>
+              <input type="number" value="80" id="settingSellerSplit" min="0" max="100"/>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Delivery Fee (₹)</label>
+              <input type="number" value="40" id="settingDeliveryFee"/>
+            </div>
+            <div class="field">
+              <label>Free Delivery Above (₹)</label>
+              <input type="number" value="500" id="settingFreeDelivery"/>
+            </div>
+          </div>
+          <button class="btn btn-green btn-full" onclick="saveFeeSettings()">💾 Save Fees</button>
+        </div>
+
+        <!-- Toggle Settings -->
+        <div class="card">
+          <div class="card-title">Features</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Accept New Orders</div>
+              <div class="setting-sub">Allow buyers to place orders</div>
+            </div>
+            <button class="toggle on" id="toggleOrders" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">New Seller Registration</div>
+              <div class="setting-sub">Allow new sellers to register</div>
+            </div>
+            <button class="toggle on" id="toggleSellerReg" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Maintenance Mode</div>
+              <div class="setting-sub">Put the app in maintenance mode</div>
+            </div>
+            <button class="toggle" id="toggleMaintenance" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">COD Payments</div>
+              <div class="setting-sub">Allow cash-on-delivery orders</div>
+            </div>
+            <button class="toggle on" id="toggleCOD" onclick="this.classList.toggle('on')"></button>
+          </div>
+        </div>
+
+        <!-- Admin Profile -->
+        <div class="card">
+          <div class="card-title">Admin Profile</div>
+          <div style="text-align:center;margin-bottom:16px">
+            <div class="prof-photo-wrap">
+              <div class="prof-photo" style="display:flex;align-items:center;justify-content:center;font-size:2rem;background:linear-gradient(135deg,var(--pink),var(--pink-d));color:#fff" id="profIcon">A</div>
+              <div class="prof-photo-edit">✏️</div>
+            </div>
+            <div style="font-weight:600;font-size:1rem" id="profName">Admin</div>
+            <div style="font-size:.8rem;color:var(--text-gray)">Super Administrator</div>
+          </div>
+          <div class="field">
+            <label>Display Name</label>
+            <input type="text" id="settingAdminName" placeholder="Admin Name"/>
+          </div>
+          <div class="field">
+            <label>New Password</label>
+            <input type="password" id="settingAdminPass" placeholder="Leave blank to keep current"/>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="updateAdminProfile()">💾 Update Profile</button>
+        </div>
+      </div>
+    </div>
+
+  </main><!-- end main-content -->
+</div><!-- end layout -->
+
+<!-- ════════ BOTTOM NAV (mobile) ════════ -->
+<nav class="bottom-nav">
+  <button class="bn-item active" data-page="dashboard" onclick="showPage('dashboard',null); setActiveBN(this)">
+    <span class="bn-icon">📊</span>
+    <span class="bn-label">Home</span>
+  </button>
+  <button class="bn-item" data-page="orders" onclick="showPage('orders',null); setActiveBN(this)">
+    <span class="bn-icon">📦</span>
+    <span class="bn-label">Orders</span>
+    <span class="bn-dot" id="bnOrderDot" style="display:block"></span>
+  </button>
+  <button class="bn-item" data-page="products" onclick="showPage('products',null); setActiveBN(this)">
+    <span class="bn-icon">🌸</span>
+    <span class="bn-label">Products</span>
+  </button>
+  <button class="bn-item" data-page="sellers" onclick="showPage('sellers',null); setActiveBN(this)">
+    <span class="bn-icon">🏪</span>
+    <span class="bn-label">Sellers</span>
+  </button>
+  <button class="bn-item" data-page="settings" onclick="showPage('settings',null); setActiveBN(this)">
+    <span class="bn-icon">⚙️</span>
+    <span class="bn-label">Settings</span>
+  </button>
+</nav>
+
+<!-- ════════ MODALS ════════ -->
+
+<!-- Add Product Modal -->
+<div class="modal-overlay" id="addProductModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('addProductModal')">✕</button>
+    <h3>➕ Add New Product</h3>
+    <div class="modal-body">
+      <div class="field">
+        <label>Product Name *</label>
+        <input type="text" id="mpName" placeholder="e.g. Red Rose Bouquet"/>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Price (₹) *</label>
+          <input type="number" id="mpPrice" placeholder="250"/>
+        </div>
+        <div class="field">
+          <label>Stock Qty *</label>
+          <input type="number" id="mpStock" placeholder="50"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Category *</label>
+        <select id="mpCategory">
+          <option value="">Select category...</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Seller *</label>
+        <select id="mpSeller">
+          <option value="">Select seller...</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <textarea id="mpDesc" placeholder="Describe the product..."></textarea>
+      </div>
+      <div class="field">
+        <label>Product Images</label>
+        <div class="img-upload-zone">
+          <input type="file" accept="image/*" multiple id="mpImages"/>
+          📷 Tap to add photos
+        </div>
+        <div class="img-preview-row" id="mpPreview"></div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="addProduct()">🌸 Add Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal-overlay" id="addCatModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('addCatModal')">✕</button>
+    <h3>🗂️ New Category</h3>
+    <div class="modal-body">
+      <div class="field">
+        <label>Category Name *</label>
+        <input type="text" id="mcName" placeholder="e.g. Roses"/>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Icon (emoji)</label>
+          <input type="text" id="mcIcon" placeholder="🌹" maxlength="2"/>
+        </div>
+        <div class="field">
+          <label>Slug</label>
+          <input type="text" id="mcSlug" placeholder="roses"/>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="addCategory()">✔ Create Category</button>
+    </div>
+  </div>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal-overlay" id="orderDetailModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('orderDetailModal')">✕</button>
+    <h3>📦 Order Details</h3>
+    <div class="modal-body" id="orderDetailBody">
+      <div class="empty"><div class="e-icon">📦</div><p>Loading...</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- Announcement Modal -->
+<div class="modal-overlay" id="addAnnModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('addAnnModal')">✕</button>
+    <h3>📢 New Announcement</h3>
+    <div class="modal-body">
+      <div class="field">
+        <label>Title *</label>
+        <input type="text" id="annTitle" placeholder="Announcement title"/>
+      </div>
+      <div class="field">
+        <label>Message *</label>
+        <textarea id="annMsg" placeholder="Write your message..."></textarea>
+      </div>
+      <div class="field">
+        <label>Target</label>
+        <select id="annTarget">
+          <option value="all">All Panels</option>
+          <option value="seller">Sellers Only</option>
+          <option value="buyer">Buyers Only</option>
+          <option value="delivery">Delivery Partners Only</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Color</label>
+        <select id="annColor">
+          <option value="">Pink (Default)</option>
+          <option value="green">Green</option>
+          <option value="blue">Blue</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="addAnnouncement()">📢 Publish</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Delivery Partner Modal -->
+<div class="modal-overlay" id="addDeliveryModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('addDeliveryModal')">✕</button>
+    <h3>🛵 Add Delivery Partner</h3>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Name *</label>
+          <input type="text" id="dpName" placeholder="Full Name"/>
+        </div>
+        <div class="field">
+          <label>Phone *</label>
+          <input type="tel" id="dpPhone" placeholder="+91 9800000000"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="dpEmail" placeholder="partner@email.com"/>
+      </div>
+      <div class="field">
+        <label>Vehicle Type</label>
+        <select id="dpVehicle">
+          <option value="bike">🏍️ Bike</option>
+          <option value="scooter">🛵 Scooter</option>
+          <option value="cycle">🚲 Cycle</option>
+          <option value="auto">🛺 Auto</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="addDeliveryPartner()">✔ Add Partner</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ TOAST ════════ -->
+<div id="toast-wrap"></div>
+
+<!-- ════════ FIREBASE CONFIG ════════ -->
+<!-- YOUR EXISTING FIREBASE CONFIG: keep as-is -->
+<script type="module" src="firebase-config.js"></script>
+
+<!-- ════════ MOBILE PATCH v7 ════════ -->
+<script>
+/* ══════════════════════════════════════════════════
+   MOBILE PATCH — inline (sidebar, table wrap, BN)
+══════════════════════════════════════════════════ */
+(function () {
+  "use strict";
+
+  const sidebar  = document.querySelector(".sidebar");
+  const overlay  = document.querySelector(".sidebar-overlay");
+  const hamBtn   = document.querySelector("#hamBtn");
+
+  function openSidebar() {
+    sidebar?.classList.add("open");
+    overlay?.classList.add("visible");
+    document.body.style.overflow = "hidden";
+  }
+  function closeSidebar() {
+    sidebar?.classList.remove("open");
+    overlay?.classList.remove("visible");
+    document.body.style.overflow = "";
+  }
+
+  hamBtn?.addEventListener("click", openSidebar);
+  overlay?.addEventListener("click", closeSidebar);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSidebar(); });
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.addEventListener("click", () => { if (window.innerWidth <= 768) closeSidebar(); });
+  });
+
+  document.querySelectorAll(".data-table").forEach((table) => {
+    if (!table.closest(".table-wrap")) {
+      const wrap = document.createElement("div");
+      wrap.className = "table-wrap";
+      table.parentNode.insertBefore(wrap, table);
+      wrap.appendChild(table);
+    }
+  });
+
+  window.addEventListener("resize", () => { if (window.innerWidth > 768) closeSidebar(); });
+})();
+</script>
+
+<!-- ════════ ADMIN JS ════════ -->
+<script type="module">
+// ─── Firebase imports (adjust path as needed) ───
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore, collection, getDocs, doc, updateDoc,
+  addDoc, deleteDoc, query, orderBy, limit, where,
+  serverTimestamp, onSnapshot, getDoc, setDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ─── YOUR FIREBASE CONFIG ───
+// Replace with your actual config from firebase-config.js or paste here:
+// import { app, db, auth } from './firebase-config.js';
+// OR paste config directly:
+const firebaseConfig = {
+  // PASTE YOUR CONFIG HERE
+  // apiKey: "...", authDomain: "...", projectId: "...",
+  // storageBucket: "...", messagingSenderId: "...", appId: "..."
+};
+
+let app_inst, auth, db;
+try {
+  app_inst = initializeApp(firebaseConfig, 'admin-app');
+  auth = getAuth(app_inst);
+  db   = getFirestore(app_inst);
+} catch(e) {
+  // If already initialized (e.g. from firebase-config.js), silently continue
+  console.warn("Firebase init:", e.message);
+}
+
+/* ══ TOAST ══ */
+window.showToast = function(msg, type='info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 300); }, 2800);
+};
+
+/* ══ THEME ══ */
+window.toggleTheme = function() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('pr_theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+};
+(function(){
+  const saved = localStorage.getItem('pr_theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+  if (saved === 'dark' || (!saved && prefersDark)) document.body.classList.add('dark');
+})();
+
+/* ══ PAGE NAVIGATION ══ */
+let currentPage = 'dashboard';
+window.showPage = function(page, navEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page)?.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  else {
+    document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
+  }
+  document.getElementById('topbarTitle').textContent =
+    navEl?.textContent?.trim() ||
+    document.querySelector(`.nav-item[data-page="${page}"]`)?.textContent?.trim() ||
+    page;
+  currentPage = page;
+  // Lazy load page data
+  if (page === 'dashboard') loadDashboard();
+  if (page === 'orders')    loadOrders();
+  if (page === 'products')  loadProducts();
+  if (page === 'sellers')   loadSellers();
+  if (page === 'buyers')    loadBuyers();
+  if (page === 'delivery')  loadDelivery();
+  if (page === 'payouts')   loadPayouts();
+  if (page === 'revenue')   loadRevenue();
+  if (page === 'announcements') loadAnnouncements();
+  if (page === 'categories') loadCategories();
+};
+
+window.setActiveBN = function(el) {
+  document.querySelectorAll('.bn-item').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+};
+
+/* ══ MODAL ══ */
+window.openModal = function(id) { document.getElementById(id).classList.add('open'); };
+window.closeModal = function(id) { document.getElementById(id).classList.remove('open'); };
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+/* ══ CHIP FILTER ══ */
+window.chipFilter = function(chipEl, selectId) {
+  document.querySelectorAll('.chip-row .chip').forEach(c => c.classList.remove('active'));
+  chipEl.classList.add('active');
+  const sel = document.getElementById(selectId);
+  if (sel) { sel.value = chipEl.dataset.val; }
+  if (selectId === 'orderStatusFilter') filterOrders();
+};
+
+/* ══ BADGE HELPERS ══ */
+function statusBadge(status) {
+  const map = {
+    pending:'badge-pending', confirmed:'badge-confirmed', packed:'badge-packed',
+    shipped:'badge-shipped', delivered:'badge-delivered', cancelled:'badge-cancelled',
+    active:'badge-active', suspended:'badge-suspended', approved:'badge-delivered',
+  };
+  return `<span class="badge ${map[status]||'badge-pending'}">${status||'—'}</span>`;
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('en-IN', {day:'2-digit',month:'short'});
+}
+function fmtAmt(n) { return '₹' + (Number(n)||0).toLocaleString('en-IN'); }
+
+/* ══ AUTH CHECK ══ */
+if (auth) {
+  onAuthStateChanged(auth, user => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    document.getElementById('adminAvatar').textContent = (user.displayName||user.email||'A')[0].toUpperCase();
+    document.getElementById('adminName').textContent = user.displayName || user.email || 'Admin';
+    document.getElementById('profIcon').textContent = (user.displayName||user.email||'A')[0].toUpperCase();
+    document.getElementById('profName').textContent = user.displayName || user.email || 'Admin';
+    hideLoader();
+    loadDashboard();
+  });
+} else {
+  hideLoader();
+  loadDashboard();
+}
+
+function hideLoader() {
+  const l = document.getElementById('loader');
+  if (l) { l.style.opacity = '0'; setTimeout(() => l.remove(), 400); }
+}
+
+/* ══ LOGOUT ══ */
+window.adminLogout = async function() {
+  if (!confirm('Sign out?')) return;
+  try { if (auth) await signOut(auth); } catch(e){}
+  window.location.href = 'index.html';
+};
+
+/* ══════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════ */
+async function loadDashboard() {
+  if (!db) return;
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+  try {
+    const [orders, sellers, buyers, products, delivery] = await Promise.all([
+      getDocs(collection(db,'orders')),
+      getDocs(collection(db,'sellers')),
+      getDocs(collection(db,'buyers')),
+      getDocs(collection(db,'products')),
+      getDocs(collection(db,'deliveryPartners')),
+    ]);
+
+    const ordersData = orders.docs.map(d => ({id:d.id,...d.data()}));
+    const totalRev = ordersData.filter(o=>o.status==='delivered').reduce((s,o)=>s+(o.total||0),0);
+    const pending  = ordersData.filter(o=>o.status==='pending').length;
+    const delivered= ordersData.filter(o=>o.status==='delivered').length;
+
+    document.getElementById('statOrders').textContent   = orders.size;
+    document.getElementById('statRevenue').textContent  = fmtAmt(totalRev);
+    document.getElementById('statSellers').textContent  = sellers.size;
+    document.getElementById('statBuyers').textContent   = buyers.size;
+    document.getElementById('statProducts').textContent = products.size;
+    document.getElementById('statDelivery').textContent = delivery.size;
+    document.getElementById('statPending').textContent  = pending;
+    document.getElementById('statDelivered').textContent= delivered;
+    document.getElementById('sideOrderBadge').textContent = pending;
+
+    // Recent orders table
+    const recent = ordersData.slice(0, 6);
+    document.getElementById('dashRecentOrders').innerHTML = recent.length
+      ? recent.map(o=>`<tr>
+          <td><span style="font-weight:600;font-size:.78rem">#${o.id.slice(-6).toUpperCase()}</span></td>
+          <td>${statusBadge(o.status)}</td>
+          <td>${fmtAmt(o.total)}</td>
+          <td class="hide-xs">${o.buyerName||'—'}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="4" class="wrap" style="text-align:center;color:var(--text-gray);padding:20px">No orders yet</td></tr>`;
+
+    // Recent sellers
+    const sellersList = sellers.docs.slice(0,5).map(d=>({id:d.id,...d.data()}));
+    document.getElementById('dashNewSellers').innerHTML = sellersList.length
+      ? sellersList.map(s=>`<tr>
+          <td><div class="tbl-user">
+            <div class="tbl-avatar" style="background:linear-gradient(135deg,var(--green),var(--green-d))">${(s.name||'S')[0]}</div>
+            <div>
+              <div class="tbl-user-name">${s.name||'—'}</div>
+              <div class="tbl-user-email">${s.email||'—'}</div>
+            </div>
+          </div></td>
+          <td>${statusBadge(s.status)}</td>
+          <td class="hide-xs">${s.productCount||0}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="3" class="wrap" style="text-align:center;color:var(--text-gray);padding:20px">No sellers yet</td></tr>`;
+
+  } catch(e) {
+    console.error('Dashboard load error:', e);
+    showToast('Error loading dashboard: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════════════════════════
+   ORDERS
+══════════════════════════════════════ */
+let allOrders = [];
+async function loadOrders() {
+  if (!db) return;
+  try {
+    const snap = await getDocs(query(collection(db,'orders'), orderBy('createdAt','desc')));
+    allOrders = snap.docs.map(d => ({id:d.id,...d.data()}));
+    renderOrders(allOrders);
+  } catch(e) { console.error(e); }
+}
+function renderOrders(orders) {
+  const tbody = document.getElementById('ordersBody');
+  if (!orders.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="wrap" style="text-align:center;color:var(--text-gray);padding:28px">No orders found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = orders.map(o=>`<tr>
+    <td><b>#${o.id.slice(-6).toUpperCase()}</b></td>
+    <td><div class="tbl-user">
+      <div class="tbl-avatar" style="background:var(--pink)">${(o.buyerName||'B')[0]}</div>
+      <div class="tbl-user-name">${o.buyerName||'—'}</div>
+    </div></td>
+    <td class="hide-xs">${o.sellerName||'—'}</td>
+    <td><b>${fmtAmt(o.total)}</b></td>
+    <td>${statusBadge(o.status)}</td>
+    <td class="hide-xs"><span class="badge ${o.paymentMethod==='cod'?'badge-pending':'badge-delivered'}">${o.paymentMethod||'—'}</span></td>
+    <td class="hide-xs">${fmtDate(o.createdAt)}</td>
+    <td><div class="tbl-actions">
+      <button class="btn btn-ghost btn-sm" title="View" onclick="viewOrder('${o.id}')">👁️</button>
+      <button class="btn btn-green btn-sm" title="Confirm" onclick="updateOrderStatus('${o.id}','confirmed')">✅</button>
+      <button class="btn btn-danger btn-sm" title="Cancel" onclick="updateOrderStatus('${o.id}','cancelled')">❌</button>
+    </div></td>
+  </tr>`).join('');
+}
+window.filterOrders = function() {
+  const q = document.getElementById('orderSearch')?.value.toLowerCase()||'';
+  const st = document.getElementById('orderStatusFilter')?.value||'';
+  const pay = document.getElementById('orderPayFilter')?.value||'';
+  renderOrders(allOrders.filter(o=>{
+    const matchQ = !q || JSON.stringify(o).toLowerCase().includes(q);
+    const matchSt = !st || o.status === st;
+    const matchPay = !pay || o.paymentMethod === pay;
+    return matchQ && matchSt && matchPay;
+  }));
+};
+window.updateOrderStatus = async function(orderId, newStatus) {
+  if (!db || !confirm(`Change status to "${newStatus}"?`)) return;
+  try {
+    await updateDoc(doc(db,'orders',orderId), {status:newStatus, updatedAt:serverTimestamp()});
+    showToast(`Order ${newStatus}!`, 'success');
+    loadOrders();
+  } catch(e) { showToast('Error: '+e.message,'error'); }
+};
+window.viewOrder = async function(orderId) {
+  openModal('orderDetailModal');
+  document.getElementById('orderDetailBody').innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto"></div></div>';
+  try {
+    const snap = await getDoc(doc(db,'orders',orderId));
+    const o = {id:snap.id,...snap.data()};
+    document.getElementById('orderDetailBody').innerHTML = `
+      <div class="info-row"><span class="info-lbl">Order ID</span><span class="info-val">#${o.id.slice(-6).toUpperCase()}</span></div>
+      <div class="info-row"><span class="info-lbl">Buyer</span><span class="info-val">${o.buyerName||'—'}</span></div>
+      <div class="info-row"><span class="info-lbl">Seller</span><span class="info-val">${o.sellerName||'—'}</span></div>
+      <div class="info-row"><span class="info-lbl">Total</span><span class="info-val">${fmtAmt(o.total)}</span></div>
+      <div class="info-row"><span class="info-lbl">Status</span><span class="info-val">${statusBadge(o.status)}</span></div>
+      <div class="info-row"><span class="info-lbl">Payment</span><span class="info-val">${o.paymentMethod||'—'}</span></div>
+      <div class="info-row"><span class="info-lbl">Date</span><span class="info-val">${fmtDate(o.createdAt)}</span></div>
+      <div style="margin-top:14px">
+        <b style="font-size:.84rem">Update Status:</b>
+        <div class="btn-group" style="margin-top:8px;flex-wrap:wrap">
+          ${['confirmed','packed','shipped','delivered','cancelled'].map(s=>
+            `<button class="btn btn-ghost btn-sm" onclick="updateOrderStatus('${o.id}','${s}');closeModal('orderDetailModal')">${s}</button>`
+          ).join('')}
+        </div>
+      </div>`;
+  } catch(e) { document.getElementById('orderDetailBody').innerHTML = '<p>Error loading order.</p>'; }
+};
+window.exportOrders = function() {
+  if (!allOrders.length) { showToast('No orders to export','warn'); return; }
+  const rows = [['ID','Buyer','Status','Total','Payment','Date'],...allOrders.map(o=>[o.id,o.buyerName,o.status,o.total,o.paymentMethod,fmtDate(o.createdAt)])];
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = 'petal-rush-orders.csv'; a.click();
+  showToast('CSV exported!','success');
+};
+
+/* ══════════════════════════════════════
+   PRODUCTS
+══════════════════════════════════════ */
+let allProducts = [];
+async function loadProducts() {
+  if (!db) return;
+  try {
+    const snap = await getDocs(collection(db,'products'));
+    allProducts = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderProducts(allProducts);
+    // Populate seller + category dropdowns
+    const sellers = await getDocs(collection(db,'sellers'));
+    const cats    = await getDocs(collection(db,'categories'));
+    const pSel = document.getElementById('productSellerFilter');
+    const pCat = document.getElementById('productCatFilter');
+    const mpSel = document.getElementById('mpSeller');
+    const mpCat = document.getElementById('mpCategory');
+    sellers.docs.forEach(d=>{
+      [pSel,mpSel].forEach(el=>{ if(el){const o=document.createElement('option');o.value=d.id;o.textContent=d.data().name||d.id;el.appendChild(o);} });
+    });
+    cats.docs.forEach(d=>{
+      [pCat,mpCat].forEach(el=>{ if(el){const o=document.createElement('option');o.value=d.id;o.textContent=d.data().name||d.id;el.appendChild(o);} });
+    });
+  } catch(e){ console.error(e); }
+}
+function renderProducts(products) {
+  const tbody = document.getElementById('productsBody');
+  if (!products.length){
+    tbody.innerHTML=`<tr><td colspan="6" class="wrap" style="text-align:center;color:var(--text-gray);padding:28px">No products found</td></tr>`;return;
+  }
+  tbody.innerHTML = products.map(p=>`<tr>
+    <td><div class="tbl-user">
+      <div class="tbl-avatar" style="background:var(--pink-l);color:var(--pink);font-size:1rem">${p.emoji||'🌸'}</div>
+      <div class="tbl-user-name">${p.name||'—'}</div>
+    </div></td>
+    <td class="hide-xs">${p.category||'—'}</td>
+    <td><b>${fmtAmt(p.price)}</b></td>
+    <td><span class="badge ${(p.stock||0)>0?'badge-active':'badge-cancelled'}">${p.stock||0}</span></td>
+    <td class="hide-xs">${p.sellerName||'—'}</td>
+    <td><div class="tbl-actions">
+      <button class="btn btn-ghost btn-sm" title="Edit" onclick="editProduct('${p.id}')">✏️</button>
+      <button class="btn btn-danger btn-sm" title="Delete" onclick="deleteProduct('${p.id}')">🗑️</button>
+    </div></td>
+  </tr>`).join('');
+}
+window.filterProducts = function(){
+  const q  = document.getElementById('productSearch')?.value.toLowerCase()||'';
+  const cat= document.getElementById('productCatFilter')?.value||'';
+  const sel= document.getElementById('productSellerFilter')?.value||'';
+  const stk= document.getElementById('productStockFilter')?.value||'';
+  renderProducts(allProducts.filter(p=>{
+    const mQ  = !q  || (p.name||'').toLowerCase().includes(q);
+    const mCat= !cat|| p.categoryId===cat;
+    const mSel= !sel|| p.sellerId===sel;
+    const mStk= !stk|| (stk==='instock'?(p.stock||0)>0:(p.stock||0)===0);
+    return mQ&&mCat&&mSel&&mStk;
+  }));
+};
+window.addProduct = async function() {
+  if(!db) return;
+  const name = document.getElementById('mpName').value.trim();
+  const price= parseFloat(document.getElementById('mpPrice').value)||0;
+  const stock= parseInt(document.getElementById('mpStock').value)||0;
+  const cat  = document.getElementById('mpCategory').value;
+  const seller=document.getElementById('mpSeller').value;
+  const desc = document.getElementById('mpDesc').value.trim();
+  if(!name||!price||!cat||!seller){showToast('Fill all required fields','warn');return;}
+  try {
+    await addDoc(collection(db,'products'),{name,price,stock,categoryId:cat,sellerId:seller,description:desc,createdAt:serverTimestamp()});
+    showToast('Product added!','success');
+    closeModal('addProductModal');
+    loadProducts();
+  } catch(e){showToast('Error: '+e.message,'error');}
+};
+window.deleteProduct = async function(id){
+  if(!db||!confirm('Delete this product?')) return;
+  try{ await deleteDoc(doc(db,'products',id)); showToast('Deleted','success'); loadProducts(); }
+  catch(e){showToast('Error: '+e.message,'error');}
+};
+
+/* ══════════════════════════════════════
+   CATEGORIES
+══════════════════════════════════════ */
+async function loadCategories() {
+  if(!db) return;
+  try {
+    const snap = await getDocs(collection(db,'categories'));
+    const cats = snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('catsBody').innerHTML = cats.length
+      ? cats.map(c=>`<tr>
+          <td style="font-size:1.4rem">${c.icon||'🌸'}</td>
+          <td><b>${c.name||'—'}</b></td>
+          <td><code style="font-size:.75rem">${c.slug||'—'}</code></td>
+          <td class="hide-xs">${c.productCount||0}</td>
+          <td><div class="tbl-actions">
+            <button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button>
+          </div></td>
+        </tr>`).join('')
+      : `<tr><td colspan="5" class="wrap" style="text-align:center;color:var(--text-gray);padding:24px">No categories</td></tr>`;
+  } catch(e){console.error(e);}
+}
+window.addCategory = async function(){
+  if(!db) return;
+  const name = document.getElementById('mcName').value.trim();
+  const icon = document.getElementById('mcIcon').value.trim()||'🌸';
+  const slug = document.getElementById('mcSlug').value.trim()||(name.toLowerCase().replace(/\s+/g,'-'));
+  if(!name){showToast('Category name required','warn');return;}
+  try {
+    await addDoc(collection(db,'categories'),{name,icon,slug,createdAt:serverTimestamp()});
+    showToast('Category created!','success');
+    closeModal('addCatModal');
+    loadCategories();
+  } catch(e){showToast('Error: '+e.message,'error');}
+};
+window.deleteCategory = async function(id){
+  if(!db||!confirm('Delete category?')) return;
+  try{ await deleteDoc(doc(db,'categories',id)); showToast('Deleted','success'); loadCategories(); }
+  catch(e){showToast('Error: '+e.message,'error');}
+};
+
+/* ══════════════════════════════════════
+   SELLERS
+══════════════════════════════════════ */
+let allSellers = [];
+async function loadSellers() {
+  if(!db) return;
+  try {
+    const snap = await getDocs(collection(db,'sellers'));
+    allSellers = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderSellers(allSellers);
+  } catch(e){console.error(e);}
+}
+function renderSellers(sellers) {
+  const tbody = document.getElementById('sellersBody');
+  if(!sellers.length){tbody.innerHTML=`<tr><td colspan="6" class="wrap" style="text-align:center;padding:24px">No sellers found</td></tr>`;return;}
+  tbody.innerHTML = sellers.map(s=>`<tr>
+    <td><div class="tbl-user">
+      <div class="tbl-avatar" style="background:linear-gradient(135deg,var(--green),var(--green-d))">${(s.name||'S')[0]}</div>
+      <div>
+        <div class="tbl-user-name">${s.name||'—'}</div>
+        <div class="tbl-user-email">${s.email||'—'}</div>
+      </div>
+    </div></td>
+    <td>${s.storeName||'—'}</td>
+    <td class="hide-xs">${s.phone||'—'}</td>
+    <td>${statusBadge(s.status||'pending')}</td>
+    <td class="hide-xs">${s.orderCount||0}</td>
+    <td><div class="tbl-actions">
+      <button class="btn btn-green btn-sm" title="Approve" onclick="updateSellerStatus('${s.id}','active')">✅</button>
+      <button class="btn btn-danger btn-sm" title="Suspend" onclick="updateSellerStatus('${s.id}','suspended')">🚫</button>
+    </div></td>
+  </tr>`).join('');
+}
+window.filterSellers = function(){
+  const q  = document.getElementById('sellerSearch')?.value.toLowerCase()||'';
+  const st = document.getElementById('sellerStatusFilter')?.value||'';
+  renderSellers(allSellers.filter(s=>{
+    const mQ  = !q  || JSON.stringify(s).toLowerCase().includes(q);
+    const mSt = !st || s.status===st;
+    return mQ&&mSt;
+  }));
+};
+window.updateSellerStatus = async function(id, status){
+  if(!db||!confirm(`Set seller status to "${status}"?`)) return;
+  try {
+    await updateDoc(doc(db,'sellers',id),{status,updatedAt:serverTimestamp()});
+    showToast(`Seller ${status}!`,status==='active'?'success':'warn');
+    loadSellers();
+  } catch(e){showToast('Error: '+e.message,'error');}
+};
+
+/* ══════════════════════════════════════
+   BUYERS
+══════════════════════════════════════ */
+async function loadBuyers() {
+  if(!db) return;
+  try {
+    const snap = await getDocs(collection(db,'buyers'));
+    const buyers = snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('buyersBody').innerHTML = buyers.length
+      ? buyers.map(b=>`<tr>
+          <td><div class="tbl-user">
+            <div class="tbl-avatar" style="background:var(--blue)">${(b.name||'B')[0]}</div>
+            <div>
+              <div class="tbl-user-name">${b.name||'—'}</div>
+              <div class="tbl-user-email">${b.email||'—'}</div>
+            </div>
+          </div></td>
+          <td class="hide-xs">${b.phone||'—'}</td>
+          <td class="hide-xs">${b.orderCount||0}</td>
+          <td><b>${fmtAmt(b.totalSpent||0)}</b></td>
+          <td><div class="tbl-actions">
+            <button class="btn btn-danger btn-sm" title="Block" onclick="blockBuyer('${b.id}')">🚫</button>
+          </div></td>
+        </tr>`).join('')
+      : `<tr><td colspan="5" class="wrap" style="text-align:center;padding:24px">No buyers found</td></tr>`;
+  } catch(e){console.error(e);}
+}
+window.blockBuyer = async function(id){
+  if(!db||!confirm('Block this buyer?')) return;
+  try{
+    await updateDoc(doc(db,'buyers',id),{status:'blocked'});
+    showToast('Buyer blocked','warn'); loadBuyers();
+  } catch(e){showToast('Error: '+e.message,'error');}
+};
+
+/* ══════════════════════════════════════
+   DELIVERY PARTNERS
+══════════════════════════════════════ */
+async function loadDelivery() {
+  if(!db) return;
+  try {
+    const snap = await getDocs(collection(db,'deliveryPartners'));
+    const partners = snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('deliveryBody').innerHTML = partners.length
+      ? partners.map(p=>`<tr>
+          <td><div class="tbl-user">
+            <div class="tbl-avatar" style="background:var(--orange)">${(p.name||'D')[0]}</div>
+            <div class="tbl-user-name">${p.name||'—'}</div>
+          </div></td>
+          <td class="hide-xs">${p.phone||'—'}</td>
+          <td>${statusBadge(p.status||'active')}</td>
+          <td class="hide-xs">${p.deliveryCount||0}</td>
+          <td class="hide-xs"><b>${fmtAmt(p.earnings||0)}</b></td>
+          <td><div class="tbl-actions">
+            <button class="btn btn-danger btn-sm" title="Suspend" onclick="suspendPartner('${p.id}')">🚫</button>
+          </div></td>
+        </tr>`).join('')
+      : `<tr><td colspan="6" class="wrap" style="text-align:center;padding:24px">No delivery partners</td></tr>`;
+  } catch(e){console.error(e);}
+}
+window.addDeliveryPartner = async function(){
+  if(!db) return;
+  const name    = document.getElementById('dpName').value.trim();
+  const phone   = document.getElementById('dpPhone').value.trim();
+  const email   = document.getElementById('dpEmail').value.trim();
+  const vehicle = document.getElementById('dpVehicle').value;
+  if(!name||!phone){showToast('Name & phone required','warn');return;}
+  try {
+    await addDoc(collection(db,'deliveryPartners'),{name,phone,email,vehicle,status:'active',deliveryCount:0,earnings:0,createdAt:serverTimestamp()});
+    showToast('Partner added!','success'); closeModal('addDeliveryModal'); loadDelivery();
+  } catch(e){showToast('Error: '+e.message,'error');}
+};
+window.suspendPartner = async function(id){
+  if(!db||!confirm('Suspend this partner?')) return;
+  try{ await updateDoc(doc(db,'deliveryPartners',id),{status:'suspended'}); showToast('Suspended','warn'); loadDelivery(); }
+  catch(e){showToast('Error: '+e.message,'error');}
+};
+
+/* ══════════════════════════════════════
+   PAYOUTS
+══════════════════════════════════════ */
+async function loadPayouts() {
+  if(!db) return;
+  try {
+    const snap = await getDocs(collection(db,'payoutRequests'));
+    const payouts = snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('payoutsBody').innerHTML = payouts.length
+      ? payouts.map(p=>`<tr>
+          <td>${p.sellerName||'—'}</td>
+          <td><b>${fmtAmt(p.amount)}</b></td>
+          <td class="hide-xs">${p.method||'UPI'}</td>
+          <td>${statusBadge(p.status||'pending')}</td>
+          <td class="hide-xs">${fmtDate(p.createdAt)}</td>
+          <td><div class="tbl-actions">
+            <button class="btn btn-green btn-sm" onclick="approvePayout('${p.id}')">✅</button>
+            <button class="btn btn-danger btn-sm" onclick="rejectPayout('${p.id}')">❌</button>
+          </div></td>
+        </tr>`).join('')
+      : `<tr><td colspan="6" class="wrap" style="text-align:center;padding:24px">No payout requests</td></tr>`;
+  } catch(e){console.error(e);}
+}
+window.approvePayout = async function(id){
+  if(!db||!confirm('Approve this payout?')) return;
+  try{ await updateDoc(doc(db,'payoutRequests',id),{status:'approved',processedAt:serverTimestamp()}); showToast('Payout approved!','success'); loadPayouts(); }
+  catch(e){showToast('Error: '+e.message,'error');}
+};
+window.rejectPayout = async function(id){
+  if(!db||!confirm('Reject this payout?')) return;
+  try{ await updateDoc(doc(db,'payoutRequests',id),{status:'rejected',processedAt:serverTimestamp()}); showToast('Payout rejected','warn'); loadPayouts(); }
+  catch(e){showToast('Error: '+e.message,'error');}
+};
+
+/* ══════════════════════════════════════
+   REVENUE
+══════════════════════════════════════ */
+async function loadRevenue() {
+  if(!db) return;
+  try {
+    const snap = await getDocs(query(collection(db,'orders'),where('status','==','delivered')));
+    const orders = snap.docs.map(d=>d.data());
+    const total  = orders.reduce((s,o)=>s+(o.total||0),0);
+    const sellerPay = total * 0.80;
+    const deliveryCut= total * 0.08;
+    const net  = total - sellerPay - deliveryCut;
+    document.getElementById('revTotal').textContent   = fmtAmt(total);
+    document.getElementById('revSeller').textContent  = fmtAmt(sellerPay);
+    document.getElementById('revDelivery').textContent= fmtAmt(deliveryCut);
+    document.getElementById('revNet').textContent     = fmtAmt(net);
+  } catch(e){console.error(e);}
+}
+
+/* ══════════════════════════════════════
+   ANNOUNCEMENTS
+══════════════════════════════════════ */
+async function loadAnnouncements() {
+  if(!db) return;
+  try {
+    const snap = await getDocs(query(collection(db,'announcements'), orderBy('createdAt','desc')));
+    const list  = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const el = document.getElementById('announcementsList');
+    el.innerHTML = list.length
+      ? list.map(a=>`
+          <div class="announce-card ${a.color||''}">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+              <div>
+                <div class="announce-title">${a.title||'—'}</div>
+                <div class="announce-sub">${a.message||''}</div>
+                <div style="font-size:.68rem;color:var(--text-light);margin-top:4px">Target: ${a.target||'all'} · ${fmtDate(a.createdAt)}</div>
+              </div>
+              <button class="btn btn-danger btn-sm btn-icon" onclick="deleteAnn('${a.id}')">🗑️</button>
+            </div>
+          </div>`).join('')
+      : `<div class="empty"><div class="e-icon">📢</div><p>No announcements yet.</p></div>`;
+  } catch(e){console.error(e);}
+}
+window.addAnnouncement = async function(){
+  if(!db) return;
+  const title  = document.getElementById('annTitle').value.trim();
+  const message= document.getElementById('annMsg').value.trim();
+  const target = document.getElementById('annTarget').value;
+  const color  = document.getElementById('annColor').value;
+  if(!title||!message){showToast('Fill title and message','warn');return;}
+  try {
+    await addDoc(collection(db,'announcements'),{title,message,target,color,createdAt:serverTimestamp()});
+    showToast('Announcement published!','success'); closeModal('addAnnModal'); loadAnnouncements();
+  } catch(e){showToast('Error: '+e.message,'error');}
+};
+window.deleteAnn = async function(id){
+  if(!db||!confirm('Delete announcement?')) return;
+  try{ await deleteDoc(doc(db,'announcements',id)); showToast('Deleted','success'); loadAnnouncements(); }
+  catch(e){showToast('Error: '+e.message,'error');}
+};
+
+/* ══════════════════════════════════════
+   SETTINGS
+══════════════════════════════════════ */
+window.saveGeneralSettings = async function(){
+  if(!db) return;
+  const data = {
+    platformName: document.getElementById('settingPlatformName').value,
+    email:        document.getElementById('settingEmail').value,
+    phone:        document.getElementById('settingPhone').value,
+    city:         document.getElementById('settingCity').value,
+    updatedAt:    serverTimestamp()
+  };
+  try{ await setDoc(doc(db,'settings','general'),data,{merge:true}); showToast('Settings saved!','success'); }
+  catch(e){showToast('Error: '+e.message,'error');}
+};
+window.saveFeeSettings = async function(){
+  if(!db) return;
+  const data = {
+    platformFee:   parseFloat(document.getElementById('settingPlatformFee').value)||10,
+    sellerSplit:   parseFloat(document.getElementById('settingSellerSplit').value)||80,
+    deliveryFee:   parseFloat(document.getElementById('settingDeliveryFee').value)||40,
+    freeDeliveryAbove: parseFloat(document.getElementById('settingFreeDelivery').value)||500,
+    updatedAt: serverTimestamp()
+  };
+  try{ await setDoc(doc(db,'settings','fees'),data,{merge:true}); showToast('Fee settings saved!','success'); }
+  catch(e){showToast('Error: '+e.message,'error');}
+};
+window.updateAdminProfile = async function(){
+  if(!auth) return;
+  const name = document.getElementById('settingAdminName').value.trim();
+  try{
+    const { updateProfile } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    if(name && auth.currentUser) await updateProfile(auth.currentUser,{displayName:name});
+    showToast('Profile updated!','success');
+    if(name){
+      document.getElementById('adminName').textContent = name;
+      document.getElementById('adminAvatar').textContent = name[0].toUpperCase();
+    }
+  } catch(e){showToast('Error: '+e.message,'error');}
+};
+
+</script>
+</body>
+</html>
